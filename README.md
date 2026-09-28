@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/images/logo.svg" alt="CourseGrab logo" width="96"></p>
+
 # CourseGrab | Udemy Course Downloader (GUI)
 
 A cross platform (Windows, Mac, Linux) desktop application for downloading the Udemy courses you are enrolled in.
