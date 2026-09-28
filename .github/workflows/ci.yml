@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-title:
+    # release-please builds the changelog from conventional commit titles.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the PR title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          re='^(feat|fix|perf|refactor|docs|chore|ci|test|style|build)(\([a-z0-9._/-]+\))?!?: .+'
+          if [[ "$TITLE" =~ $re ]]; then
+            echo "OK: $TITLE"
+          else
+            echo "PR title must look like 'feat: add thing' or 'fix(login): handle empty token'."
+            echo "Types: feat, fix, perf, refactor, docs, chore, ci, test, style, build."
+            exit 1
+          fi
+
+  base-branch:
+    # Work goes to dev; main only takes dev (releases) and release-please's own branch.
+    if: ${{ github.base_ref == 'main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the source branch
+        env:
+          HEAD: ${{ github.head_ref }}
+        run: |
+          if [[ "$HEAD" == "dev" || "$HEAD" == release-please--* ]]; then
+            echo "OK: $HEAD -> main"
+          else
+            echo "PRs into main must come from dev (or a release-please branch), not '$HEAD'. Retarget this PR to dev."
+            exit 1
+          fi
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - name: Syntax check
+        run: |
+          for f in index.js assets/js/*.js; do node --check "$f"; done
+      - name: Package smoke test
+        run: bunx electron-builder --linux --dir --publish never
