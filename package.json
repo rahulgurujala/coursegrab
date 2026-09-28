@@ -1,15 +1,16 @@
 {
-  "name": "Udeler",
+  "name": "coursegrab",
+  "productName": "CourseGrab",
   "version": "1.8.2",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rahulgurujala/udeler.git"
+    "url": "https://github.com/rahulgurujala/coursegrab.git"
   },
-  "homepage": "https://github.com/rahulgurujala/udeler",
+  "homepage": "https://github.com/rahulgurujala/coursegrab",
   "bugs": {
-    "url": "https://github.com/rahulgurujala/udeler/issues"
+    "url": "https://github.com/rahulgurujala/coursegrab/issues"
   },
-  "description": "A cross platform (Windows, Mac, Linux) desktop application for downloading Udemy Courses.",
+  "description": "A cross platform (Windows, Mac, Linux) desktop application for downloading your enrolled Udemy courses. Fork of FaisalUmair/udemy-downloader-gui.",
   "scripts": {
     "start": "electron .",
     "postinstall": "electron-builder install-app-deps",
@@ -20,6 +21,7 @@
     "dist": "build"
   },
   "build": {
+    "appId": "com.rahulgurujala.coursegrab",
     "directories": {
       "buildResources": "assets/images/build"
     },
@@ -28,11 +30,10 @@
     }
   },
   "author": {
-    "name": "Faisal Umair",
-    "email": "eff.umair@gmail.com",
-    "url": "https://github.com/FaisalUmair"
+    "name": "rahulgurujala",
+    "url": "https://github.com/rahulgurujala"
   },
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "electron": "^44.4.5",
     "electron-builder": "^26.15.3"
@@ -46,5 +47,12 @@
     "node-vtt-to-srt": "git+https://github.com/riazXrazor/vtt-to-srt.git",
     "sanitize-filename": "^1.6.1",
     "socket.io": "^2.2.0"
-  }
+  },
+  "contributors": [
+    {
+      "name": "Faisal Umair",
+      "email": "eff.umair@gmail.com",
+      "url": "https://github.com/FaisalUmair"
+    }
+  ]
 }
