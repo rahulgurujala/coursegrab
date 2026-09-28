@@ -28,7 +28,7 @@ A free, ad-free, cross-platform desktop downloader with no accounts of its own. 
 - Window is resizable, default 1040x720, minimum 720x520 (confirmed; was fixed 550x700).
 - UI is jQuery plus custom CSS (`assets/css/app.css`, tokens in DESIGN.md); Semantic UI was removed. Markup is static in `index.html`, rows are built by `assets/js/ui.js`, and the download engine in `assets/js/app.js` must keep working.
 - Renderer runs with nodeIntegration and contextIsolation off (Electron 44); the Udemy login window is a separate default-sandboxed BrowserWindow.
-- Existing app icons (`assets/images/build/icon.*`) are kept for now.
+- App logo: a "C" holding a play button on a cobalt rounded square (`assets/images/logo.svg`; app icons in `assets/images/build/` are generated from `icon.svg` with `bunx electron scripts/make-icons.js`).
 
 ## Brand Commitments
 Visual direction (user-confirmed): clean, modern, professional, simple but full-featured. No themed or decorative worlds. Craft bar: Apple Music/Podcasts (macOS), Raycast/Arc, Notion/Vercel dashboard, Linear. Light and dark themes, both polished, following the OS setting.

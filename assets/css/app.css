@@ -407,7 +407,6 @@ button {
 .brand img {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
 }
 
 .nav {
@@ -1007,9 +1006,8 @@ kbd {
 }
 
 .login-head img {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
+  width: 64px;
+  height: 64px;
 }
 
 .login-head h1 {
@@ -1100,7 +1098,6 @@ kbd {
 .about-hero img {
   width: 56px;
   height: 56px;
-  border-radius: 12px;
 }
 
 .about-hero .grow {

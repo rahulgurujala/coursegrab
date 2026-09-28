@@ -82,6 +82,9 @@ Flat. Depth comes from 1px borders and tonal layers (canvas, surface, sidebar). 
 ## Components
 Buttons: primary (accent fill), secondary (surface with border), ghost, danger. Switch for boolean options. Native select and input, restyled. Course row: thumbnail, title, status line, one primary action. Download row adds a progress bar, a "Lecture 14/62 · 720p · 2.4 MB/s" line and Pause/Resume/Cancel; done rows offer Open folder; failed rows state the cause and Retry. Dialogs use native `<dialog>`. Toasts confirm saves and report recoverable errors.
 
+## Logo
+A white "C" that holds a play button (a course you keep) on a cobalt gradient rounded square. Source: `assets/images/logo.svg` (tight, used in the app and README) and `assets/images/build/icon.svg` (1024 canvas with margin). Regenerate png, ico and icns with `bunx electron scripts/make-icons.js` (icns needs macOS). Keep it self-contained so it works on light and dark backgrounds.
+
 ## Do's and Don'ts
 - Do show state with text plus colour, never colour alone.
 - Do keep one primary action per row and per screen.
