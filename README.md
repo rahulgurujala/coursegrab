@@ -57,7 +57,7 @@ By default the courses will be downloaded to the user's Download folder. The str
 
 ### Contributing:
 
-Any contributions are welcome, if you plan to contribute please read the [contributing](https://github.com/rahulgurujala/udeler/blob/master/CONTRIBUTING.md) docs first.
+Any contributions are welcome, if you plan to contribute please read the [contributing](https://github.com/rahulgurujala/udeler/blob/main/CONTRIBUTING.md) docs first.
 
 ### Prerequisites:
 
