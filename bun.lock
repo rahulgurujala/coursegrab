@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "Udeler",
+      "name": "coursegrab",
       "dependencies": {
         "@electron/remote": "^2.1.3",
         "dialogs": "^2.0.1",
