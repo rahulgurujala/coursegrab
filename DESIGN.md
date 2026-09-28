@@ -62,13 +62,13 @@ spacing:
 # Design System: CourseGrab
 
 ## Overview
-**Creative North Star: "The Quiet Utility."** The app is a tool people start and walk away from, so the interface stays calm, neutral and legible, and lets state (downloading, paused, done, failed) do the talking. Restrained colour: cool neutrals plus one cobalt accent used only for the primary action, the current selection and progress. Success, warning and danger colours appear only as state, never as decoration. Familiar affordances everywhere: sidebar navigation, list rows, switches, native selects. Craft bar: Apple Music and Podcasts, Raycast, Vercel and Linear.
+**Creative North Star: "The Quiet Utility."** The app is a tool people start and walk away from, so the interface stays calm, neutral and legible, and lets state (downloading, paused, done, failed) do the talking. Restrained color: cool neutrals plus one cobalt accent, used only for the primary action, the current selection and progress. Success, warning and danger colors appear only as state, never as decoration. Familiar affordances everywhere: sidebar navigation, list rows, switches, native selects. Craft bar: Apple Music and Podcasts, Raycast, Vercel and Linear.
 
 ## Colors
-Restrained strategy. Accent `#2F5BEA` (dark theme `#7B97FF`). A second neutral layer (`sidebar`) separates navigation from content. Text muted is tinted from the neutral hue, never pure grey. Light and dark are both first-class and follow `prefers-color-scheme`.
+Restrained strategy. Accent `#2F5BEA` (dark theme `#7B97FF`). A second neutral layer (`sidebar`) separates navigation from content. Muted text is tinted from the neutral hue, never pure gray. Light and dark are both first class and follow `prefers-color-scheme`. Error text and badges use an `on-danger` color per theme so they stay readable.
 
 ## Typography
-System UI stack only, so the app feels native on each OS and covers every locale, including Arabic. Fixed scale, not fluid: 12 (label), 13 (caption), 14 (body), 16 (heading), 22 (title). Weights 400, 500, 600. Tabular numerals for speeds, counts and percentages.
+System UI stack only, so the app feels native on each OS and covers every locale, including Arabic and Persian. Fixed scale, not fluid: 12 (label), 13 (caption), 14 (body), 16 (heading), 22 (title). Weights 400, 500, 600. Tabular numerals for speeds, counts and percentages.
 
 ## Layout
 Sidebar (220px, collapses to icons below 860px) plus a scrolling content column with a sticky header. Content max width 920px for lists, 680px for settings; the sticky header shares the list width. 4px base spacing unit. Logical CSS properties throughout so RTL mirrors correctly.
@@ -80,15 +80,18 @@ Flat. Depth comes from 1px borders and tonal layers (canvas, surface, sidebar). 
 8px controls, 12px cards and grouped lists, pill for status chips and the badge. 1px borders.
 
 ## Components
+Sign in card: one primary action, a divider, then a secondary Access Token action that opens a panel with inline errors. Errors appear at the top of the card, and inside the token panel for token problems.
+
 Buttons: primary (accent fill), secondary (surface with border), ghost, danger. Switch for boolean options. Native select and input, restyled. Course row: thumbnail, title, status line, one primary action. Download row adds a progress bar, a "Lecture 14/62 · 720p · 2.4 MB/s" line and Pause/Resume/Cancel; done rows offer Open folder; failed rows state the cause and Retry. Dialogs use native `<dialog>`. Toasts confirm saves and report recoverable errors.
 
 ## Logo
 A white "C" that holds a play button (a course you keep) on a cobalt gradient rounded square. Source: `assets/images/logo.svg` (tight, used in the app and README) and `assets/images/build/icon.svg` (1024 canvas with margin). Regenerate png, ico and icns with `bunx electron scripts/make-icons.js` (icns needs macOS). Keep it self-contained so it works on light and dark backgrounds.
 
 ## Do's and Don'ts
-- Do show state with text plus colour, never colour alone.
+- Do show state with text plus color, never color alone.
 - Do keep one primary action per row and per screen.
 - Do use skeletons and inline busy states, not full-window blockers.
-- Don't add decorative gradients, glows, glass or coloured side borders.
-- Don't use more than one accent colour, or the accent for status.
-- Don't hide primary actions in icon-only buttons; icon-only buttons always carry a label for assistive tech and a tooltip.
+- Don't add decorative gradients, glows, glass or colored side borders. The logo is the only gradient.
+- Don't use more than one accent color, or the accent for status.
+- Don't hide primary actions in icon-only buttons. Icon-only buttons always carry an accessible label and a tooltip.
+- Don't use em dashes in interface text or documentation.
