@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain, nativeTheme } = require("electron");
 const remoteMain = require("@electron/remote/main");
 const path = require("path");
 const url = require("url");
@@ -13,15 +13,19 @@ let win;
 function createWindow() {
   // Create the browser window.
   win = new BrowserWindow({
-    width: 550,
-    height: 700,
+    width: 1040,
+    height: 720,
+    minWidth: 720,
+    minHeight: 520,
     icon: __dirname + "/assets/images/build/icon.png",
-    resizable: false,
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0e1013" : "#f7f8fa",
+    show: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
     }
   });
+  win.once("ready-to-show", () => win.show());
   remoteMain.enable(win.webContents);
   // and load the index.html of the app.
   win.loadURL(

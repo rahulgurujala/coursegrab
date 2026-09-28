@@ -1,410 +1,365 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" dir="ltr">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src https: http:"
+    />
     <title>CourseGrab | Udemy Course Downloader</title>
-    <link rel="stylesheet" href="assets/css/semantic.min.css" />
-    <link rel="stylesheet" href="assets/css/style.css" />
+    <link rel="stylesheet" href="assets/css/app.css" />
   </head>
   <body>
-    <div class="ui basic subtitle modal">
-      <div class="ui icon header">
-        <i class="closed captioning icon"></i>
-        Select Subtitle
-      </div>
-      <div class="content">
-        <div class="ui fluid selection dropdown">
-          <input type="hidden" name="subtitle" />
-          <i class="dropdown icon"></i>
-          <div class="default text">Subtitle Language</div>
+    <!-- icon sprite -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11" /><path d="M7 11l5 5 5-5" /><path d="M5 20h14" /></symbol>
+      <symbol id="i-courses" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M10 9.5v5l4.5-2.5z" /></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9" /><path d="M17 7h3" /><circle cx="15" cy="7" r="2" /><path d="M4 17h3" /><path d="M11 17h9" /><circle cx="9" cy="17" r="2" /></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></symbol>
+      <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" /><path d="M16 8l4 4-4 4" /><path d="M20 12H10" /></symbol>
+      <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6" /><path d="M20 4l-9 9" /><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" /></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" /></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" /></symbol>
+      <symbol id="i-retry" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6" /><path d="M20 4v5h-5" /></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5" /><path d="M12 16h.01" /></symbol>
+      <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4" /><path d="M11 12l9-9" /><path d="M16 7l3 3" /></symbol>
+      <symbol id="i-browser" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18" /></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16" /><path d="M9 7V4h6v3" /><path d="M6 7l1 13h10l1-13" /></symbol>
+    </svg>
+
+    <!-- Sign in -->
+    <main id="login" class="login">
+      <div class="login-card">
+        <div class="login-head">
+          <img src="assets/images/build/icon.png" alt="" />
+          <h1 data-i18n>Sign in to Udemy</h1>
+          <p data-i18n>CourseGrab opens Udemy's own sign-in window and keeps only a session token on this computer.</p>
         </div>
+
+        <div class="login-actions">
+          <div class="business-row">
+            <label for="business" data-i18n>Udemy Business</label>
+            <span class="switch"><input type="checkbox" id="business" /><span class="track"></span></span>
+          </div>
+
+          <div class="field" id="business-field" hidden>
+            <label for="subdomain" data-i18n>Udemy Business Name</label>
+            <div class="input-group">
+              <input class="input" id="subdomain" placeholder="company" autocomplete="off" spellcheck="false" />
+              <span class="suffix">.udemy.com</span>
+            </div>
+          </div>
+
+          <button class="btn primary block" id="login-udemy" type="button" data-i18n>Login Using Credentials</button>
+
+          <div class="divider"><span data-i18n>Or</span></div>
+
+          <div class="method-buttons">
+            <button class="btn" id="method-token" type="button" aria-expanded="false" aria-controls="token-panel">
+              <svg class="icon"><use href="#i-key" /></svg><span data-i18n>Access Token</span>
+            </button>
+            <button class="btn" id="login-authenticator" type="button" disabled aria-describedby="auth-hint">
+              <svg class="icon"><use href="#i-browser" /></svg><span data-i18n>Authenticator</span>
+            </button>
+          </div>
+          <p class="hint" id="auth-hint" data-i18n>Authenticator works when the Udeler Authenticator browser extension is connected.</p>
+
+          <div class="panel" id="token-panel" hidden>
+            <div class="field">
+              <label for="token" data-i18n>Access Token</label>
+              <input class="input" id="token" type="password" autocomplete="off" spellcheck="false" />
+              <p class="hint" data-i18n>While signed in to Udemy in your browser, copy the value of the access_token cookie.</p>
+            </div>
+            <div class="row">
+              <button class="btn" id="token-cancel" type="button" data-i18n>Cancel</button>
+              <button class="btn primary" id="token-submit" type="button" data-i18n>Sign in</button>
+            </div>
+          </div>
+
+          <div class="panel" id="auth-panel" hidden role="status">
+            <div class="status-line" style="--show-display: flex">
+              <span class="spinner"></span><span data-i18n>Awaiting Login Request</span>
+            </div>
+            <p class="hint" data-i18n>Sign in to Udemy in your browser. CourseGrab will pick it up automatically.</p>
+            <div class="row"><button class="btn" id="auth-cancel" type="button" data-i18n>Cancel</button></div>
+          </div>
+
+          <p class="notice error" id="login-error" role="alert" hidden></p>
+        </div>
+
+        <p class="login-foot" data-i18n>Free and open source. A fork of Udeler by Faisal Umair.</p>
       </div>
+    </main>
+
+    <!-- App -->
+    <div id="app" class="app" hidden>
+      <aside class="sidebar">
+        <div class="brand">
+          <img src="assets/images/build/icon.png" alt="" />
+          <span>CourseGrab</span>
+        </div>
+        <nav class="nav" aria-label="Main">
+          <button class="nav-item" type="button" data-view="courses" aria-current="page" title="Courses">
+            <svg class="icon"><use href="#i-courses" /></svg><span class="label-text" data-i18n>Courses</span>
+          </button>
+          <button class="nav-item" type="button" data-view="downloads" title="Downloads">
+            <svg class="icon"><use href="#i-download" /></svg><span class="label-text" data-i18n>Downloads</span>
+            <span class="badge" id="downloads-badge" aria-hidden="true" hidden></span>
+          </button>
+          <button class="nav-item" type="button" data-view="settings" title="Settings">
+            <svg class="icon"><use href="#i-settings" /></svg><span class="label-text" data-i18n>Settings</span>
+          </button>
+          <button class="nav-item" type="button" data-view="about" title="About">
+            <svg class="icon"><use href="#i-info" /></svg><span class="label-text" data-i18n>About</span>
+          </button>
+        </nav>
+        <div class="sidebar-foot">
+          <div class="account">
+            <span class="account-label" data-i18n>Signed in</span>
+            <span class="account-name" id="account-name"></span>
+          </div>
+          <button class="btn ghost" id="logout" type="button" title="Logout">
+            <svg class="icon flip"><use href="#i-logout" /></svg><span data-i18n>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      <main class="main" id="main">
+        <!-- Courses -->
+        <section class="view active" id="view-courses" aria-labelledby="h-courses">
+          <header class="view-head">
+            <h1 id="h-courses" data-i18n>Courses</h1>
+            <span class="grow"></span>
+            <form class="search" id="search-form" role="search">
+              <svg class="icon"><use href="#i-search" /></svg>
+              <input class="input" id="search-input" type="text" data-i18n-placeholder="Search Courses" placeholder="Search Courses" aria-label="Search Courses" data-i18n-aria="Search Courses" autocomplete="off" />
+              <button class="clear" id="search-clear" type="button" aria-label="Clear" data-i18n-aria="Clear" hidden><svg class="icon"><use href="#i-x" /></svg></button>
+            </form>
+          </header>
+          <div class="view-body">
+            <ul class="list" id="courses-list"></ul>
+            <div id="courses-empty" class="empty" hidden>
+              <svg class="icon"><use href="#i-search" /></svg>
+              <strong data-i18n>No Courses Found</strong>
+              <p data-i18n>Try a different keyword, or paste a course link into the search box.</p>
+            </div>
+            <div id="courses-error" class="empty" hidden>
+              <svg class="icon"><use href="#i-alert" /></svg>
+              <strong data-i18n>Could not reach Udemy</strong>
+              <p data-i18n>Check your connection and try again.</p>
+              <button class="btn" type="button" id="courses-retry" data-i18n>Retry</button>
+            </div>
+            <div class="load-more" id="load-more" hidden>
+              <button class="btn" type="button" id="load-more-btn" data-i18n>Load More</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Downloads -->
+        <section class="view" id="view-downloads" aria-labelledby="h-downloads">
+          <header class="view-head">
+            <div class="grow">
+              <h1 id="h-downloads" data-i18n>Downloads</h1>
+              <p class="sub" id="downloads-summary" aria-live="polite"></p>
+            </div>
+            <button class="btn" id="clear-finished" type="button" hidden data-i18n>Clear completed</button>
+          </header>
+          <div class="view-body">
+            <ul class="list" id="downloads-list"></ul>
+            <div id="downloads-empty" class="empty">
+              <svg class="icon"><use href="#i-download" /></svg>
+              <strong data-i18n>No downloads yet</strong>
+              <p data-i18n>Pick a course and press Download. Progress shows up here.</p>
+              <button class="btn primary" type="button" data-goto="courses" data-i18n>Browse courses</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Settings -->
+        <section class="view" id="view-settings" aria-labelledby="h-settings">
+          <header class="view-head"><h1 id="h-settings" data-i18n>Settings</h1></header>
+          <div class="view-body narrow">
+            <div class="group">
+              <h2 data-i18n>Download Settings</h2>
+              <div class="list">
+                <div class="setting">
+                  <span class="title" data-i18n>Download Path</span>
+                  <span class="desc path" id="set-path-text"></span>
+                  <div class="control">
+                    <button class="btn" id="set-choose" type="button" data-i18n>Change</button>
+                  </div>
+                </div>
+                <div class="setting">
+                  <label class="title" for="set-quality" data-i18n>Video Quality</label>
+                  <span class="desc" data-i18n>Auto uses what Udemy offers first.</span>
+                  <div class="control">
+                    <select class="select" id="set-quality">
+                      <option value="" data-i18n>Auto</option>
+                      <option value="Highest" data-i18n>Highest</option>
+                      <option value="1080p">1080p</option>
+                      <option value="720p">720p</option>
+                      <option value="480p">480p</option>
+                      <option value="360p">360p</option>
+                      <option value="Lowest" data-i18n>Lowest</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="setting">
+                  <label class="title" for="set-subs" data-i18n>Download subtitles</label>
+                  <span class="desc" data-i18n>Saved next to each lecture as .srt.</span>
+                  <div class="control"><span class="switch"><input type="checkbox" id="set-subs" /><span class="track"></span></span></div>
+                </div>
+                <div class="setting">
+                  <label class="title" for="set-attachments" data-i18n>Download attachments</label>
+                  <span class="desc" data-i18n>Articles, files, and links that belong to a lecture.</span>
+                  <div class="control"><span class="switch"><input type="checkbox" id="set-attachments" /><span class="track"></span></span></div>
+                </div>
+                <div class="setting range">
+                  <div class="setting" style="padding: 0; border: 0">
+                    <label class="title" for="set-range" data-i18n>Enable Download Start/End</label>
+                    <span class="desc" data-i18n>Only download a range of lectures, counted from 1.</span>
+                    <div class="control"><span class="switch"><input type="checkbox" id="set-range" /><span class="track"></span></span></div>
+                  </div>
+                  <div class="range-fields" id="range-fields" hidden>
+                    <div class="field">
+                      <label for="set-start" data-i18n>Download Start</label>
+                      <input class="input" id="set-start" type="number" min="1" data-i18n-placeholder="Start Download at" placeholder="Start Download at" />
+                    </div>
+                    <div class="field">
+                      <label for="set-end" data-i18n>Download End</label>
+                      <input class="input" id="set-end" type="number" min="1" data-i18n-placeholder="End Download at" placeholder="End Download at" />
+                    </div>
+                  </div>
+                </div>
+                <div class="setting">
+                  <label class="title" for="set-retry"><span data-i18n>Auto Retry on Error (Experimental)</span></label>
+                  <span class="desc" data-i18n>Try a failed download again automatically.</span>
+                  <div class="control"><span class="switch"><input type="checkbox" id="set-retry" /><span class="track"></span></span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="group">
+              <h2 data-i18n>Application Settings</h2>
+              <div class="list">
+                <div class="setting">
+                  <label class="title" for="set-language" data-i18n>Language</label>
+                  <span class="desc" data-i18n>Applies the next time the app starts.</span>
+                  <div class="control"><select class="select" id="set-language"><option value="">English</option></select></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- About -->
+        <section class="view" id="view-about" aria-labelledby="h-about">
+          <header class="view-head"><h1 id="h-about" data-i18n>About</h1></header>
+          <div class="view-body narrow">
+            <div class="about-hero">
+              <img src="assets/images/build/icon.png" alt="" />
+              <div class="grow">
+                <h2>CourseGrab</h2>
+                <p>v<span id="app-version"></span></p>
+                <p id="update-status" aria-live="polite"></p>
+              </div>
+              <button class="btn" id="check-updates" type="button" data-i18n>Check for updates</button>
+            </div>
+
+            <div class="group" style="margin-top: 28px">
+              <h2 data-i18n>Links</h2>
+              <div class="list">
+                <a class="link-row" href="https://github.com/rahulgurujala/coursegrab">
+                  <div class="grow"><div>rahulgurujala/coursegrab</div><div class="desc" data-i18n>Repository</div></div>
+                  <svg class="icon flip"><use href="#i-external" /></svg>
+                </a>
+                <a class="link-row" href="https://github.com/rahulgurujala/coursegrab/issues">
+                  <div class="grow"><div data-i18n>Report Bug</div><div class="desc">github.com/rahulgurujala/coursegrab/issues</div></div>
+                  <svg class="icon flip"><use href="#i-external" /></svg>
+                </a>
+                <a class="link-row" href="https://github.com/rahulgurujala/coursegrab/pulls">
+                  <div class="grow"><div data-i18n>Contribute</div><div class="desc">github.com/rahulgurujala/coursegrab/pulls</div></div>
+                  <svg class="icon flip"><use href="#i-external" /></svg>
+                </a>
+              </div>
+            </div>
+
+            <div class="group">
+              <h2 data-i18n>Keyboard shortcuts</h2>
+              <div class="list">
+                <div class="setting"><span class="title" data-i18n>Focus search</span><div class="control"><kbd>/</kbd></div></div>
+                <div class="setting"><span class="title" data-i18n>Switch view</span><div class="control"><kbd>Ctrl/Cmd</kbd> + <kbd>1</kbd>–<kbd>4</kbd></div></div>
+              </div>
+            </div>
+
+            <div class="group">
+              <h2 data-i18n>Credits</h2>
+              <div class="list">
+                <a class="link-row" href="https://github.com/FaisalUmair/udemy-downloader-gui">
+                  <div class="grow"><div>FaisalUmair/udemy-downloader-gui</div><div class="desc" data-i18n>Original project (formerly Udeler), released under the MIT License.</div></div>
+                  <svg class="icon flip"><use href="#i-external" /></svg>
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
-    <div class="ui basic update-available modal">
-      <div class="ui icon header">
-        <i class="gift icon"></i>
-        New Update Available
-      </div>
-      <div class="content">
-        <p>
-          <center>
-            A new version of CourseGrab is available. You can download the latest
-            version from github releases page
-          </center>
-        </p>
-      </div>
-      <div class="actions" style="text-align: center;">
-        <div class="ui red cancel inverted button">
-          <i class="remove icon"></i>
-          Cancel
+
+    <!-- Dialogs -->
+    <dialog id="dlg-subtitle" aria-labelledby="dlg-subtitle-title">
+      <form method="dialog" class="dialog-form">
+        <div class="dialog-body">
+          <h2 id="dlg-subtitle-title" data-i18n>Select Subtitle</h2>
+          <div class="field">
+            <label for="subtitle-select" data-i18n>Subtitle Language</label>
+            <select class="select" id="subtitle-select"></select>
+          </div>
         </div>
-        <div class="ui green ok inverted download-update button">
-          <i class="checkmark icon"></i>
-          Download
+        <div class="dialog-actions">
+          <button class="btn" value="cancel" data-i18n>Cancel</button>
+          <button class="btn primary" value="ok" data-i18n>Download</button>
         </div>
-      </div>
-    </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlg-confirm" aria-labelledby="dlg-confirm-title">
+      <form method="dialog">
+        <div class="dialog-body">
+          <h2 id="dlg-confirm-title"></h2>
+          <p id="dlg-confirm-text"></p>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn" value="cancel" data-i18n>Cancel</button>
+          <button class="btn primary" value="ok" id="dlg-confirm-ok"></button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
     <script>
       const $ = (jQuery = require("jquery"));
-    </script>
-    <script src="assets/js/semantic.min.js"></script>
-    <script type="text/javascript">
       const settings = require("./assets/js/settings");
       const appVersion = require(__dirname + "/package.json").version;
       function translate(text) {
-        if (
-          !settings.get("general.language") ||
-          settings.get("general.language") == "English"
-        ) {
+        const lang = settings.get("general.language");
+        if (!lang || lang == "English") return text;
+        try {
+          const meta = require("./locale/meta.json");
+          const locale = require(`./locale/${meta[lang]}`);
+          return locale[text] || text;
+        } catch (e) {
           return text;
-        } else {
-          try {
-            var meta = require("./locale/meta.json");
-            var locale = require(`./locale/${
-              meta[settings.get("general.language")]
-            }`);
-            return locale[text] || text;
-          } catch (e) {
-            return text;
-          }
         }
       }
-
-      var template = `
-        <div class="ui center aligned login grid">
-            <div class="ui login dimmer">
-              <div class="ui big text loader">${translate("Logging in")}</div>
-            </div>
-
-            <div class="ui authenticator dimmer">
-              <div class="ui big text loader">
-                ${translate("Awaiting Login Request")}
-              </div>
-            </div>
-    
-          <div class="row">
-            <div class="ten wide column">
-                    <h2 class="ui icon grey login header">
-                      <i class="circular green user icon"></i>
-                      ${translate("Udemy Login")}
-                    </h2>
-            </div>
-          </div>
-
-          <div class="row">
-              <div class="ten wide column">
-                <form class="ui form">
-                <div class="field">                   
-                   <div class="ui fluid label checkbox">
-                    <input type="checkbox" name="business" id="business">
-                    <label for="business">${translate(
-                      "Udemy Business"
-                    )} ?</label>
-                  </div>
-                </div>
-                <div class="field">
-                  <input type="text" id="subdomain" name="subdomain" placeholder="${translate(
-                    "Udemy Business Name"
-                  )}" style="display: none">
-                </div>
-              </form>
-              <div class="ui horizontal divider">
-                Choose Login Method
-              </div>
-              <button class="ui fluid green button" type="button" onclick="loginWithUdemy()">${translate(
-                "Login Using Credentials"
-              )}</button>
-              <div class="ui horizontal divider">
-                Or
-              </div>
-              <div class="ui fluid icon buttons">
-                <button class="ui teal login disabled authenticator button"><i class="user secret icon"></i> Authenticator</button>
-                <div class="or"></div>
-                <button class="ui blue button" onclick="loginWithAccessToken()"><i class="key icon"></i> Access Token</button>
-              </div>
-              </div>
-          </div>
-
-  </div>
-
-     <div class="ui dashboard">    
-            <div class="ui logout dimmer">
-              <div class="ui big text loader">${translate("Logging Out")}</div>
-            </div>  
-            <div class="ui courses dimmer">
-              <div class="ui big text loader">${translate(
-                "Loading Courses"
-              )}</div>
-            </div>
-             <div class="ui course dimmer">
-              <div class="ui big text loader">${translate("Getting Info")}</div>
-            </div>
-            <div class="ui about dimmer">
-              <div class="ui big text loader">${translate(
-                "Checking for Updates"
-              )}</div>
-            </div>
-              <div class="ui visible fixed vertical inverted sidebar labeled icon menu ${
-                settings.get("general.language") == "Arabic" ? "right" : "left"
-              }">
-                <a class="active red courses-sidebar item">
-                  <i class="file video icon"></i>
-                  ${translate("Courses")}
-                </a>
-                <a class="downloads-sidebar item">
-                  <i class="download icon"></i>
-                  ${translate("Downloads")}
-                </a>
-               <a class="settings-sidebar item">
-                  <i class="wrench icon"></i>
-                  ${translate("Settings")}
-                </a>
-                <a class="about-sidebar item">
-                  <i class="info icon"></i>
-                  ${translate("About")}
-                </a>
-                <a class="logout-sidebar item">
-                  <i class="power off icon"></i>
-                  ${translate("Logout")}
-                </a>
-              </div>
-                  <div class="content">
-
-                      <div class="ui courses section">
-                        <form class="ui search form">
-                        <div class="ui fluid search">
-                          <div class="ui fluid icon input">
-                            <input class="prompt" type="text" placeholder="${translate(
-                              "Search Courses"
-                            )}">
-                            <i class="search icon"></i>
-                          </div>
-                        </div>
-                        </form>
-                        <div class="ui divided unstackable courses items">
-                        </div>
-                      </div>
-
-                    <div class="ui downloads section">
-                        <h5 class="ui top attached header">
-                              <i class="ui download icon"></i> ${translate(
-                                "Downloads"
-                              )}
-                        </h5>
-                        <div class="ui divided unstackable courses items attached segment">
-                        </div>
-                      </div>
-
-                      <div class="ui settings section"> 
-                      <form class="ui form">
-                        <h5 class="ui top attached  header">
-                              <i class="ui download icon"></i> ${translate(
-                                "Download Settings"
-                              )}
-                          </h5>
-                            <div class="ui attached  segment">
-                                <div class="field">
-                                      <label>${translate(
-                                        "Download Path"
-                                      )}</label>
-                                    <div class="ui action input">
-                                        <input type="text" readonly name="downloadpath">
-                                        <label class="ui icon button btn-file" onclick="selectDownloadPath()">
-                                             <i class="folder icon"></i>
-                                        </label>
-                                    </div>
-                                </div>         
-                              <div class="field">
-                                <div class="ui checkbox">
-                                    <input type="checkbox" name="enabledownloadstartend">
-                                    <label>${translate(
-                                      "Enable Download Start/End"
-                                    )}</label>
-                                  </div>
-                                </div>
-                              <div class="two unstackable fields">
-                                  <div class="field">
-                                    <label>${translate(
-                                      "Download Start"
-                                    )}</label>
-                                    <input placeholder="${translate(
-                                      "Start Download at"
-                                    )}" type="number" min="1" name="downloadstart">
-                                  </div>
-                                  <div class="field">
-                                    <label>${translate("Download End")}</label>
-                                    <input placeholder="${translate(
-                                      "End Download at"
-                                    )}" type="number" min="1" name="downloadend">
-                                  </div>
-                                </div>
-                                  <div class="ui  divider"></div>
-                                    <div class="field">
-                                      <div class="ui checkbox">
-                                          <input type="checkbox" name="skipattachments">
-                                          <label>${translate(
-                                            "Skip Attachments"
-                                          )}</label>
-                                        </div>
-                                      </div>
-                                    <div class="field">
-                                      <label>${translate(
-                                        "Video Quality"
-                                      )}</label>
-                                      <div class="ui fluid search selection dropdown">
-                                          <input type="hidden" name="videoquality">
-                                          <i class="dropdown icon"></i>
-                                          <div class="default text"></div>
-                                          <div class="menu">
-                                          <div class="item" data-value="Auto">${translate(
-                                            "Auto"
-                                          )}</div>
-                                          <div class="item" data-value="Lowest">${translate(
-                                            "Lowest"
-                                          )}</div>
-                                          <div class="item" data-value="360p">360p</div>
-                                          <div class="item" data-value="480p">480p</div>
-                                          <div class="item" data-value="720p">720p</div>
-                                          <div class="item" data-value="1080p">1080p</div>
-                                          <div class="item" data-value="Highest">${translate(
-                                            "Highest"
-                                          )}</div>
-                                        </div>
-                                         </div>
-                                    </div>
-                                    <div class="field">
-                                      <div class="ui checkbox">
-                                          <input type="checkbox" name="skipsubtitles">
-                                          <label>${translate(
-                                            "Skip Subtitles"
-                                          )}</label>
-                                        </div>
-                                      </div>
-                                      <div class="field">
-                                      <div class="ui checkbox">
-                                          <input type="checkbox" name="autoretry">
-                                          <label>${translate(
-                                            "Auto Retry on Error (Experimental)"
-                                          )}</label>
-                                        </div>
-                                      </div>
-
-                              </div>
-                          <h5 class="ui top attached  header">
-                              <i class="ui setting icon"></i> ${translate(
-                                "Application Settings"
-                              )}
-                          </h5>
-
-                          <div class="ui attached segment">
-                             <div class="field">
-                                      <label>${translate(
-                                        "Language (Requires App Restart)"
-                                      )}</label>
-                                      <div class="ui fluid search selection language dropdown">
-                                          <input type="hidden" name="language">
-                                          <i class="dropdown icon"></i>
-                                          <div class="default text"></div>
-                                          <div class="menu">
-                                          <div class="item" data-value="English">English</div>
-                                        </div>
-                                      </div>
-                                </div>
-                            </div>
-
-                              <div class="ui horizontal divider"></div>
-                              <button class="ui fluid green button" type="submit">${translate(
-                                "Save"
-                              )}</button>
-                          </form>
-
-                      </div>
-
-                      <div class="ui about section">   
-                          <div class="ui segment">
-                            <h4 class="ui center aligned icon header">
-                              <i class="grey file code outline icon"></i>
-                              CourseGrab v${appVersion}
-                            </h4>
-                            <button class="ui tiny fluid basic check-updates button">${translate(
-                              "Check for updates"
-                            )}</button>
-                            <h3 class="ui header">${translate("Links")}</h3>
-                            <div class="ui relaxed divided list">
-                              <div class="item">
-                                <i class="large github middle aligned icon"></i>
-                                <div class="content">
-                                  <a class="header" href="https://github.com/rahulgurujala/coursegrab">rahulgurujala/coursegrab</a>
-                                  <div class="description">${translate(
-                                    "Repository"
-                                  )}</div>
-                                </div>
-                              </div>
-                              <div class="item">
-                                <i class="large github middle aligned icon"></i>
-                                <div class="content">
-                                  <a class="header" href="https://github.com/rahulgurujala">rahulgurujala</a>
-                                  <div class="description">${translate(
-                                    "Developer"
-                                  )}</div>
-                                </div>
-                              </div>
-                              <div class="item">
-                                <i class="large github middle aligned icon"></i>
-                                <div class="content">
-                                  <a class="header" href="https://github.com/FaisalUmair/udemy-downloader-gui">FaisalUmair/udemy-downloader-gui</a>
-                                  <div class="description">${translate(
-                                    "Original project"
-                                  )}</div>
-                                </div>
-                              </div>
-                            </div>
-                            <h3 class="ui header">${translate(
-                              "Development"
-                            )}</h3>
-                              <div class="ui relaxed divided list">
-                                <div class="item">
-                                  <i class="large github middle aligned icon"></i>
-                                  <div class="content">
-                                    <a class="header" href="https://github.com/rahulgurujala/coursegrab/issues">coursegrab/issues</a>
-                                    <div class="description">${translate(
-                                      "Report Bug"
-                                    )}</div>
-                                  </div>
-                                </div>
-                                <div class="item">
-                                  <i class="large github middle aligned icon"></i>
-                                  <div class="content">
-                                    <a class="header" href="https://github.com/rahulgurujala/coursegrab/pulls">coursegrab/pulls</a>
-                                    <div class="description">${translate(
-                                      "Contribute"
-                                    )}</div>
-                                  </div>
-                                </div>
-                              </div>
-                          </div>
-                      </div>
-                </div>
-     </div>
-`;
-
-      $("body").prepend(template);
-
-      if (settings.get("general.language") == "Arabic") {
-        $(".ui.dashboard .content")
-          .css("margin-left", "10px")
-          .css("width", "80%");
-      }
-
-      var $languageDropdown = $(".language.dropdown .menu");
-      $.getJSON("locale/meta.json", function(data) {
-        $.each(data, function(key) {
-          $languageDropdown.append(
-            `<div class="item" data-value=${key}>${key}</div>`
-          );
-        });
-      });
     </script>
+    <script src="assets/js/ui.js"></script>
     <script src="assets/js/app.js"></script>
   </body>
 </html>
