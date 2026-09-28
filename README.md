@@ -52,9 +52,10 @@ It only works with courses you already have access to. Everything runs on your c
 
 **Download**
 - Download several courses at the same time.
-- Pause, resume and cancel from the Downloads view. Partly downloaded files continue where they stopped.
+- Pause, resume and cancel from the Downloads view. Partly downloaded files continue where they stopped, even after the app was closed or crashed.
+- Download a course again later and only what is **new or changed** is fetched. Lectures you already have are left alone, and renamed lectures are moved instead of downloaded again.
 - See the current lecture, quality, speed and overall progress for every course.
-- Failed downloads state the reason and offer Retry. Downloads interrupted by closing the app come back ready to continue.
+- Failed downloads state the reason and offer Retry. A dropped connection is retried automatically. Downloads interrupted by closing the app come back with a Resume button.
 - A live badge on the Downloads tab shows what is running, even when you are on another screen.
 - Open the finished folder with one click.
 
@@ -63,6 +64,7 @@ It only works with courses you already have access to. Everything runs on your c
 - Subtitles converted to `.srt`, with a language picker per course.
 - Attachments: articles, files and links that belong to a lecture.
 - Optional lecture range, for example only lectures 10 to 25.
+- Lectures that have no downloadable video (for example ones protected by DRM) are skipped and listed, so one protected lecture never blocks the rest of the course.
 
 **The app**
 - Light and dark themes that follow your system.
@@ -160,6 +162,7 @@ If you used Udeler before, CourseGrab keeps your existing settings and login.
 3. **Start the download.** Press **Download** on a course. If the course has subtitles you are asked which language to save.
 4. **Follow the progress.** The Downloads view shows every course. Use **Pause**, **Resume** and **Cancel**, and **Retry** if something fails.
 5. **Open your files.** Press **Open folder** on a finished course.
+6. **Get updates later.** Press **Get updates** on a finished course, or press Download on it again. CourseGrab compares the course with what you saved and downloads only new lectures, replaced videos and anything missing.
 
 ### Where your files go
 
@@ -178,7 +181,12 @@ Downloads/
       ...
 ```
 
-Running a download again skips the files that already exist and continues partly finished ones.
+Two small helper files may appear in a course folder:
+
+- `.coursegrab.json` records which lectures were saved. It is how CourseGrab knows what changed the next time. You can delete it, the next run then treats existing files as up to date.
+- `Skipped lectures.txt` lists lectures that could not be downloaded, and why.
+
+Running a download again skips files that already exist, continues partly finished ones, and downloads only lectures that are new, replaced or missing.
 
 ## Settings
 
@@ -228,7 +236,21 @@ The row shows the lecture and the reason. Press **Retry** to continue. Files tha
 <details>
 <summary><strong>I closed the app while a download was running</strong></summary>
 
-The course comes back in the Downloads view marked as interrupted. Press **Download** to continue where it stopped.
+The course comes back in the Downloads view marked as interrupted, with a **Resume** button. Press it to continue where it stopped. Data that was already downloaded is kept, so only the missing part is fetched.
+
+</details>
+
+<details>
+<summary><strong>Some lectures were skipped</strong></summary>
+
+CourseGrab saves the video files that Udemy provides directly. Some lectures are protected with DRM or otherwise have no downloadable video, and CourseGrab cannot download those. They are skipped, the rest of the course is downloaded normally, and the row shows how many were skipped. `Skipped lectures.txt` in the course folder lists them.
+
+</details>
+
+<details>
+<summary><strong>A course says it is not available for download</strong></summary>
+
+Udemy did not return the lectures of that course. This happens with draft or unpublished courses and with courses that were removed. Open the course on Udemy to check that you can still access it.
 
 </details>
 
@@ -290,7 +312,8 @@ Installers are written to `dist/`. Build each installer on its own system (macOS
 ```text
 index.js                Electron main process (window, menu)
 index.html              App markup: sign in, courses, downloads, settings, about
-assets/js/app.js        Sign in, course list, download engine
+assets/js/app.js        Sign in, course list, settings, download controls
+assets/js/engine.js     Download engine: reads a course, finds what changed, saves files
 assets/js/ui.js         Views, dialogs, toasts and the course row component
 assets/js/settings.js   Settings stored in the user data folder
 assets/css/app.css      All styles, light and dark themes

@@ -82,7 +82,7 @@ Flat. Depth comes from 1px borders and tonal layers (canvas, surface, sidebar). 
 ## Components
 Sign in card: one primary action, a divider, then a secondary Access Token action that opens a panel with inline errors. Errors appear at the top of the card, and inside the token panel for token problems.
 
-Buttons: primary (accent fill), secondary (surface with border), ghost, danger. Switch for boolean options. Native select and input, restyled. Course row: thumbnail, title, status line, one primary action. Download row adds a progress bar, a "Lecture 14/62 · 720p · 2.4 MB/s" line and Pause/Resume/Cancel; done rows offer Open folder; failed rows state the cause and Retry. Dialogs use native `<dialog>`. Toasts confirm saves and report recoverable errors.
+Buttons: primary (accent fill), secondary (surface with border), ghost, danger. Switch for boolean options. Native select and input, restyled. Course row: thumbnail, title, status line, one primary action. Download row adds a progress bar, a "Lecture 14/62 · 720p · 2.4 MB/s" line and Pause/Resume/Cancel; done rows offer Open folder and Get updates; interrupted rows offer Resume with the saved progress; failed rows state the cause and Retry. Dialogs use native `<dialog>`. Toasts confirm saves and report recoverable errors.
 
 ## Logo
 A white "C" that holds a play button (a course you keep) on a cobalt gradient rounded square. Source: `assets/images/logo.svg` (tight, used in the app and README) and `assets/images/build/icon.svg` (1024 canvas with margin). Regenerate png, ico and icns with `bunx electron scripts/make-icons.js` (icns needs macOS). Keep it self-contained so it works on light and dark backgrounds.

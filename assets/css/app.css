@@ -690,6 +690,7 @@ button {
 .course[data-state="preparing"] [data-show~="preparing"],
 .course[data-state="downloading"] [data-show~="downloading"],
 .course[data-state="paused"] [data-show~="paused"],
+.course[data-state="interrupted"] [data-show~="interrupted"],
 .course[data-state="done"] [data-show~="done"],
 .course[data-state="error"] [data-show~="error"] {
   display: var(--show-display, block);
@@ -710,7 +711,7 @@ button {
 }
 
 #downloads-list .course-actions {
-  width: 210px;
+  min-width: 210px;
   justify-content: flex-end;
 }
 
@@ -745,7 +746,8 @@ button {
   transform-origin: right center;
 }
 
-.course[data-state="paused"] .meter-fill {
+.course[data-state="paused"] .meter-fill,
+.course[data-state="interrupted"] .meter-fill {
   background: var(--text-faint);
 }
 
