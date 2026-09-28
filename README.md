@@ -6,17 +6,11 @@ A cross platform (Windows, Mac, Linux) desktop application for downloading the U
 
 <sub>Created and maintained by [rahulgurujala](https://github.com/rahulgurujala). Based on Udeler by [Faisal Umair](https://github.com/FaisalUmair/udemy-downloader-gui) (MIT, archived). Bugs and feature requests: [issues](https://github.com/rahulgurujala/coursegrab/issues).</sub>
 
-### Facing Login Issues?
+### Signing in
 
-Besides the built-in login window, you can log in through the **Udeler Authenticator** browser extension made by the original author (a chrome extension for authenticating a Udemy account with the desktop app).
-
-#### How to use the Authenticator extension?
-
-1. Install the extension from [here](https://www.udeler.com/extension) (original author's site; availability is not guaranteed).
-
-2. After installing/enabling the extension, open the CourseGrab desktop app, you will see a new anonymous icon on the login page. Click the icon and it will start to listen for any login requests from your chrome web browser.
-
-3. Open Udemy website on your chrome web browser and simply login to your account. CourseGrab will detect the login and will let you in. If you are already logged in to Udemy, you can simply visit the website and it will still detect your account.
+- **Login Using Credentials** opens Udemy's own sign-in window. When you finish signing in, CourseGrab detects it and closes the window.
+- **Access Token** signs you in with a token you paste. While signed in to Udemy in your browser, copy the value of the `access_token` cookie (browser developer tools, Application or Storage tab, Cookies, `udemy.com`).
+- Udemy Business users switch on **Udemy Business** and enter their company name first.
 
 ### :fire: Features
 

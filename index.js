@@ -4,7 +4,11 @@ const path = require("path");
 const url = require("url");
 remoteMain.initialize();
 // Keep the pre-rebrand "Udeler" data folder so existing logins/settings carry over.
-app.setPath("userData", path.join(app.getPath("appData"), "Udeler"));
+// COURSEGRAB_USER_DATA lets tests run against a throwaway folder instead of real settings.
+app.setPath(
+  "userData",
+  process.env.COURSEGRAB_USER_DATA || path.join(app.getPath("appData"), "Udeler")
+);
 var downloadsSaved = false;
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.

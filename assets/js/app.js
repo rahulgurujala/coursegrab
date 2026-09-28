@@ -10,13 +10,9 @@ const vtt2srt = require("node-vtt-to-srt");
 var Downloader = require("mt-files-downloader");
 var shell = electron.shell;
 var https = require("https");
-var app = require("http").createServer();
-var io = require("socket.io")(app);
 
-const $loginAuthenticator = $("#login-authenticator");
 const $subDomain = $("#subdomain");
 
-var awaitingLogin = false;
 var headers = {};
 var downloadControls = {}; // course id -> { pause, resume, cancel } of the running download
 
@@ -28,47 +24,6 @@ function ensureDownloadRow($course) {
   }
 }
 var subDomain = settings.get("subdomain") || "www";
-
-app.listen(50490);
-
-// ---------- Authenticator extension (socket.io) ----------
-io.on("connect", function(socket) {
-  $loginAuthenticator.prop("disabled", false);
-
-  socket.on("disconnect", function() {
-    $loginAuthenticator.prop("disabled", true);
-    $("#auth-panel").prop("hidden", true);
-    awaitingLogin = false;
-  });
-
-  $loginAuthenticator.off("click.auth").on("click.auth", function() {
-    hideLoginError();
-    $("#auth-panel").prop("hidden", false);
-    awaitingLogin = true;
-    socket.emit("awaitingLogin");
-  });
-
-  socket.on("newLogin", function(data) {
-    if (awaitingLogin) {
-      var sub = data.subdomain || "www";
-      verifyToken(data.access_token, sub).then(function(result) {
-        if (!awaitingLogin) return;
-        awaitingLogin = false;
-        $("#auth-panel").prop("hidden", true);
-        if (result.ok) {
-          completeLogin(data.access_token, sub);
-        } else {
-          showLoginError(tokenErrorText(result.status));
-        }
-      });
-    }
-  });
-});
-
-$("#auth-cancel").click(function() {
-  awaitingLogin = false;
-  $("#auth-panel").prop("hidden", true);
-});
 
 electron.ipcRenderer.on("saveDownloads", function() {
   saveDownloads(true);

@@ -1057,12 +1057,6 @@ kbd {
   gap: 10px;
 }
 
-.method-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
 .panel {
   display: grid;
   gap: 10px;
