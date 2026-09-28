@@ -130,5 +130,6 @@
   "Could not reach Udemy": "",
   "Focus search": "",
   "Keyboard shortcuts": "",
-  "Switch view": ""
+  "Switch view": "",
+  "Udemy rejected this token. Copy a fresh access_token cookie while you are signed in, then try again.": ""
 }
