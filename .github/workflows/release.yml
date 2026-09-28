@@ -1,0 +1,75 @@
+# Runs on every push to main.
+# 1. release-please opens/updates a Release PR (version bump + CHANGELOG) from conventional commits.
+# 2. When that PR is merged it tags vX.Y.Z and creates the GitHub Release; this workflow then builds
+#    the installers and attaches them. Builds live here because releases created with the default
+#    GITHUB_TOKEN do not trigger other workflows.
+# 3. After a release, main is merged back into dev so version and changelog commits are not lost.
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: rp
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  build:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            args: --mac --x64 --arm64
+          - os: windows-latest
+            args: --win --x64
+          - os: ubuntu-latest
+            args: --linux --x64
+    runs-on: ${{ matrix.os }}
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false" # installers are unsigned for now
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - run: bunx electron-builder ${{ matrix.args }} --publish never
+      - name: Attach installers to the release
+        shell: bash
+        run: |
+          find dist -maxdepth 1 -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.AppImage' \) -print0 \
+            | xargs -0 gh release upload "${{ needs.release-please.outputs.tag_name }}" --clobber
+
+  sync-dev:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Merge main back into dev
+        run: |
+          gh pr create --repo "${{ github.repository }}" --base dev --head main \
+            --title "chore: sync main into dev" \
+            --body "Brings the release commit (version and changelog) back into dev." || true
+          gh pr merge --repo "${{ github.repository }}" main --merge || true

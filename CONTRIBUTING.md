@@ -135,4 +135,12 @@ Follow Step 2 of How to Section
 
 
 ### Note: 
-Please do not use any translation tools as it would defeat the purpose of the contribution. 
+Please do not use any translation tools as it would defeat the purpose of the contribution.
+
+## Branches and releases
+
+- `dev` is where all work is merged. Open pull requests against `dev` and squash-merge them.
+- `main` only receives releases. To ship, open a pull request from `dev` to `main` and merge it with a **merge commit** (not squash), so every change keeps its own changelog line.
+- Pull request titles use [Conventional Commits](https://www.conventionalcommits.org): `feat:` (minor), `fix:` (patch), `feat!:` or a `BREAKING CHANGE:` footer (major). `docs:`, `refactor:` and `perf:` show in the changelog; `chore:`, `ci:`, `test:`, `style:` and `build:` do not.
+- After a merge into `main`, [release-please](https://github.com/googleapis/release-please) opens a **Release PR** with the new version and `CHANGELOG.md`. Merging it tags the version, creates the GitHub Release and attaches installers for macOS, Windows and Linux. Installers are unsigned for now.
+

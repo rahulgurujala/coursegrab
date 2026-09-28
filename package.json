@@ -22,11 +22,26 @@
   },
   "build": {
     "appId": "com.rahulgurujala.coursegrab",
+    "artifactName": "CourseGrab-${version}-${os}-${arch}.${ext}",
     "directories": {
       "buildResources": "assets/images/build"
     },
+    "files": [
+      "index.html",
+      "index.js",
+      "assets/**/*",
+      "locale/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
     "linux": {
-      "category": "Utility"
+      "category": "Utility",
+      "target": "AppImage"
     }
   },
   "author": {
