@@ -60,15 +60,9 @@
 
           <div class="divider"><span data-i18n>Or</span></div>
 
-          <div class="method-buttons">
-            <button class="btn" id="method-token" type="button" aria-expanded="false" aria-controls="token-panel">
-              <svg class="icon"><use href="#i-key" /></svg><span data-i18n>Access Token</span>
-            </button>
-            <button class="btn" id="login-authenticator" type="button" disabled aria-describedby="auth-hint">
-              <svg class="icon"><use href="#i-browser" /></svg><span data-i18n>Authenticator</span>
-            </button>
-          </div>
-          <p class="hint" id="auth-hint" data-i18n>Authenticator works when the Udeler Authenticator browser extension is connected.</p>
+          <button class="btn block" id="method-token" type="button" aria-expanded="false" aria-controls="token-panel">
+            <svg class="icon"><use href="#i-key" /></svg><span data-i18n>Access Token</span>
+          </button>
 
           <div class="panel" id="token-panel" hidden>
             <div class="field">
@@ -81,14 +75,6 @@
               <button class="btn" id="token-cancel" type="button" data-i18n>Cancel</button>
               <button class="btn primary" id="token-submit" type="button" data-i18n>Sign in</button>
             </div>
-          </div>
-
-          <div class="panel" id="auth-panel" hidden role="status">
-            <div class="status-line" style="--show-display: flex">
-              <span class="spinner"></span><span data-i18n>Awaiting Login Request</span>
-            </div>
-            <p class="hint" data-i18n>Sign in to Udemy in your browser. CourseGrab will pick it up automatically.</p>
-            <div class="row"><button class="btn" id="auth-cancel" type="button" data-i18n>Cancel</button></div>
           </div>
 
         </div>

@@ -18,7 +18,7 @@ CourseGrab logs the user into Udemy, lists the courses they are subscribed to, a
 A free, ad-free, cross-platform desktop downloader with no accounts of its own. It only accesses courses the user is enrolled in, using their own Udemy authentication. Created and maintained by rahulgurujala; based on Udeler by Faisal Umair (FaisalUmair/udemy-downloader-gui, MIT, archived), renamed CourseGrab.
 
 ## Operating Context
-- Sign-in methods: Udemy login window (credentials), an access token pasted by the user, or the original author's "Udeler Authenticator" Chrome extension talking to a local socket.io server inside the app. Udemy Business users supply a company subdomain.
+- Sign-in methods: Udemy login window (credentials; the app watches for the access_token cookie) or an access token pasted by the user. Udemy Business users supply a company subdomain.
 - Views today: Login, Courses (search + list), Downloads (per-course progress, pause/resume/cancel), Settings, About, plus modals (subtitle language picker, update available) and full-screen loading states.
 - Downloads are long-running; the window may be open for hours. Course lists can be large; search filters them.
 - Interface language is user-selectable (English plus about 20 locales, including Arabic which mirrors the sidebar to the right, i.e. RTL support must be preserved). Strings are translated by English text key via `translate()` and `locale/*.json`.
