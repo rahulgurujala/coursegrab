@@ -12,21 +12,23 @@ An Electron desktop app for Windows, macOS and Linux. The renderer is HTML, CSS 
 Udemy learners who want offline copies of courses they are already enrolled in: individual students, and employees on Udemy Business company subdomains. They start long, multi-course downloads and leave them running in the background, so they return to check progress, pause or resume, or fix a failed lecture.
 
 ## Product Purpose
-CourseGrab logs the user into Udemy, lists the courses they are subscribed to, and downloads lecture videos, subtitles and attachments into an organised folder structure on disk. Success: the user finds a course fast, starts a download with the right options, trusts it is progressing, and ends with a complete, well-organised folder.
+CourseGrab logs the user into Udemy, lists the courses they are subscribed to, and downloads lecture videos, subtitles and attachments into an organised folder structure on disk. Success: the user finds a course fast, starts a download with the right options, trusts it is progressing, and ends with a complete, well-organised folder. Downloading the same course again fetches only what is new or changed.
 
 ## Positioning
 A free, ad-free, cross-platform desktop downloader with no accounts of its own. It only accesses courses the user is enrolled in, using their own Udemy authentication. Created and maintained by rahulgurujala; based on Udeler by Faisal Umair (FaisalUmair/udemy-downloader-gui, MIT, archived), renamed CourseGrab.
 
 ## Operating Context
 - Sign-in methods: Udemy login window (credentials; the app watches for the access_token cookie) or an access token pasted by the user. Udemy Business users supply a company subdomain.
-- Views: Sign in, Courses (search and list), Downloads (per-course progress with pause, resume, cancel, open folder and retry), Settings and About, plus dialogs for the subtitle language and logout confirmation.
+- Views: Sign in, Courses (search and list), Downloads (per-course progress with pause, resume, cancel, open folder and retry), a course details view (every lecture with its live state, and a dry-run comparison with Udemy), Settings and About, plus dialogs for the subtitle language and logout confirmation.
 - Downloads are long-running; the window may be open for hours. Course lists can be large; search filters them.
+- Some lectures cannot be downloaded (for example DRM protected video). They are skipped and listed, never allowed to block the rest of the course. CourseGrab does not decrypt protected content.
+- Each course folder holds a `.coursegrab.json` record so a later run can detect new, replaced or renamed lectures. Interrupted downloads resume from the data already saved.
 - Interface language is user-selectable (English plus more than 20 locales, including Arabic and Persian, so right to left support must be preserved). Strings are translated by English text key through `translate()` and `locale/*.json`.
 
 ## Capabilities and Constraints
 - Settings: download path, video quality (Auto, Highest, 1080p to 360p, Lowest), subtitles on or off, attachments on or off, lecture range, auto retry (experimental), language. They save as they change.
 - The window is resizable: default 1040 by 720, minimum 720 by 520.
-- UI is jQuery plus custom CSS (`assets/css/app.css`, tokens in DESIGN.md); Semantic UI was removed. Markup is static in `index.html`, rows are built by `assets/js/ui.js`, and the download engine in `assets/js/app.js` must keep working.
+- UI is jQuery plus custom CSS (`assets/css/app.css`, tokens in DESIGN.md); Semantic UI was removed. Markup is static in `index.html`, rows are built by `assets/js/ui.js`, and the download engine in `assets/js/engine.js` must keep working.
 - The renderer runs with nodeIntegration on and contextIsolation off (Electron 44). The Udemy sign in window is a separate, default-sandboxed BrowserWindow.
 - Settings and the saved login live in a user data folder named `Udeler`, kept from the earlier version so existing users stay signed in.
 - Releases are automated: `dev` receives work, `main` receives releases, and release-please builds the changelog and version (see CONTRIBUTING.md).
