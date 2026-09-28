@@ -1,6 +1,8 @@
 const { app, BrowserWindow, Menu, ipcMain } = require("electron");
+const remoteMain = require("@electron/remote/main");
 const path = require("path");
 const url = require("url");
+remoteMain.initialize();
 var downloadsSaved = false;
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -14,9 +16,11 @@ function createWindow() {
     icon: __dirname + "/assets/images/build/icon.png",
     resizable: false,
     webPreferences: {
-      nodeIntegration: true
+      nodeIntegration: true,
+      contextIsolation: false
     }
   });
+  remoteMain.enable(win.webContents);
   // and load the index.html of the app.
   win.loadURL(
     url.format({
