@@ -2,7 +2,7 @@
 
 A cross platform (Windows, Mac, Linux) desktop application for downloading the Udemy courses you are enrolled in.
 
-> **Fork notice.** CourseGrab is a maintained fork of [FaisalUmair/udemy-downloader-gui](https://github.com/FaisalUmair/udemy-downloader-gui) (formerly known as **Udeler**), which is archived and no longer maintained. Thanks to Faisal Umair and the original contributors. This fork is renamed, migrated to bun and Electron 44, and continues development here. Bugs and feature requests: [issues](https://github.com/rahulgurujala/coursegrab/issues).
+<sub>Created and maintained by [rahulgurujala](https://github.com/rahulgurujala). Based on Udeler by [Faisal Umair](https://github.com/FaisalUmair/udemy-downloader-gui) (MIT, archived). Bugs and feature requests: [issues](https://github.com/rahulgurujala/coursegrab/issues).</sub>
 
 ### Facing Login Issues?
 
@@ -161,4 +161,4 @@ bun run build-win --ia32
 
 ## Credits
 
-Original project by [Faisal Umair](https://github.com/FaisalUmair) ([FaisalUmair/udemy-downloader-gui](https://github.com/FaisalUmair/udemy-downloader-gui)), released under the MIT License. See [LICENSE](LICENSE).
+Created and maintained by [rahulgurujala](https://github.com/rahulgurujala). Based on Udeler by [Faisal Umair](https://github.com/FaisalUmair/udemy-downloader-gui) and its contributors, released under the MIT License. See [LICENSE](LICENSE).

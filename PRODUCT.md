@@ -15,7 +15,7 @@ Udemy learners who want offline copies of courses they are already enrolled in: 
 CourseGrab logs the user into Udemy, lists the courses they are subscribed to, and downloads lecture videos, subtitles and attachments into an organised folder structure on disk. Success: the user finds a course fast, starts a download with the right options, trusts it is progressing, and ends with a complete, well-organised folder.
 
 ## Positioning
-A free, ad-free, cross-platform desktop downloader with no accounts of its own. It only accesses courses the user is enrolled in, using their own Udemy authentication. Maintained fork of FaisalUmair/udemy-downloader-gui (formerly Udeler), renamed CourseGrab.
+A free, ad-free, cross-platform desktop downloader with no accounts of its own. It only accesses courses the user is enrolled in, using their own Udemy authentication. Created and maintained by rahulgurujala; based on Udeler by Faisal Umair (FaisalUmair/udemy-downloader-gui, MIT, archived), renamed CourseGrab.
 
 ## Operating Context
 - Sign-in methods: Udemy login window (credentials), an access token pasted by the user, or the original author's "Udeler Authenticator" Chrome extension talking to a local socket.io server inside the app. Udemy Business users supply a company subdomain.
@@ -32,7 +32,7 @@ A free, ad-free, cross-platform desktop downloader with no accounts of its own. 
 
 ## Brand Commitments
 Visual direction (user-confirmed): clean, modern, professional, simple but full-featured. No themed or decorative worlds. Craft bar: Apple Music/Podcasts (macOS), Raycast/Arc, Notion/Vercel dashboard, Linear. Light and dark themes, both polished, following the OS setting.
-Name is CourseGrab. It is a fork and must keep a visible credit to the original project. No donate section. Tone is a plain utility: free, no ads, no accounts.
+Name is CourseGrab. It is based on Udeler and keeps a small credit to Faisal Umair (README, About page, sign-in footer, LICENSE) next to the maintainer's name, rahulgurujala. No donate section. Tone is a plain utility: free, no ads, no accounts.
 
 ## Evidence on Hand
 No customer quotes, benchmarks or usage data. Old demo GIF was removed. No screenshots or marketing assets for the new brand yet.

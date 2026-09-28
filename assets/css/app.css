@@ -1127,6 +1127,12 @@ kbd {
   text-decoration: none;
 }
 
+.link-row.small {
+  padding-block: 9px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 .link-row:first-child {
   border-top: 0;
 }
