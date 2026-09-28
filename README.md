@@ -30,9 +30,68 @@ Besides the built-in login window, you can log in through the **Udeler Authentic
 This software is intended to help you download Udemy courses for personal use only. Sharing the content of your subscribed courses is strictly prohibited under Udemy Terms of Use. Each and every course on Udemy is subjected to copyright infringement.
 This software does not magically download any paid course available on Udemy, you need to provide your Udemy login credentials to download the courses you have enrolled in. CourseGrab downloads the lecture videos by simply using the source of the video player returned to the user by Udemy after proper authentication, you can also do the same manually. Many download managers use same method to download videos on a web page. This app only automates the process of a user doing this manually in a web browser.
 
-### Downloads:
+### Installation
 
-No prebuilt binaries have been published for CourseGrab yet. Build from source (see below); releases will appear on the [Releases](https://github.com/rahulgurujala/coursegrab/releases) page.
+Download the installer for your system from the [latest release](https://github.com/rahulgurujala/coursegrab/releases/latest):
+
+| System | File |
+| ------ | ---- |
+| macOS, Apple Silicon (M1, M2, M3, M4) | `CourseGrab-<version>-mac-arm64.dmg` |
+| macOS, Intel | `CourseGrab-<version>-mac-x64.dmg` |
+| Windows 64-bit | `CourseGrab-<version>-win-x64.exe` |
+| Linux 64-bit | `CourseGrab-<version>-linux-x86_64.AppImage` |
+
+Only download installers from the Releases page above.
+
+#### Why does my system show a warning?
+
+The installers are **not code-signed yet**. Signing certificates cost money, and CourseGrab is a free project. Your system therefore shows a warning the first time you open it. It does not mean the file is damaged or unsafe. Follow the steps for your system:
+
+**macOS**
+
+1. Open the `.dmg` and drag **CourseGrab** into **Applications**.
+2. Open CourseGrab from Applications. macOS says it "can't be opened" or "cannot verify the developer". Close that message.
+3. Open **System Settings → Privacy & Security** (on macOS 12 or older: **System Preferences → Security & Privacy → General**).
+4. Scroll to the **Security** section, find the message about CourseGrab and click **Open Anyway**. Enter your password if asked, then click **Open**.
+
+If macOS says the app is **"damaged and can't be opened"** and there is no Open Anyway button, remove the download flag in Terminal and open the app again:
+
+```
+xattr -dr com.apple.quarantine /Applications/CourseGrab.app
+```
+
+You only need to do this once.
+
+**Windows**
+
+1. Run the `.exe`. A blue window says **"Windows protected your PC"**.
+2. Click **More info**, then **Run anyway**.
+3. Finish the installer as usual.
+
+Some antivirus programs flag unsigned installers by mistake. If yours does, you can allow the file or [build CourseGrab from source](#build).
+
+**Linux**
+
+1. Make the AppImage runnable and start it:
+
+   ```
+   chmod +x CourseGrab-*.AppImage
+   ./CourseGrab-*.AppImage
+   ```
+
+2. If it fails with a **FUSE** error, install FUSE (`sudo apt install libfuse2`, or `libfuse2t64` on Ubuntu 24.04), or run it without FUSE:
+
+   ```
+   ./CourseGrab-*.AppImage --appimage-extract-and-run
+   ```
+
+3. If it stops with a **sandbox** error on Ubuntu 24.04 or newer, start it with `--no-sandbox`:
+
+   ```
+   ./CourseGrab-*.AppImage --no-sandbox
+   ```
+
+If you used Udeler before, CourseGrab keeps your existing settings and login.
 
 ### Note:
 
