@@ -10,7 +10,7 @@
   "bugs": {
     "url": "https://github.com/rahulgurujala/coursegrab/issues"
   },
-  "description": "A cross platform (Windows, Mac, Linux) desktop application for downloading your enrolled Udemy courses. Fork of FaisalUmair/udemy-downloader-gui.",
+  "description": "A cross platform (Windows, Mac, Linux) desktop application for downloading your enrolled Udemy courses. Based on Udeler by Faisal Umair.",
   "scripts": {
     "start": "electron .",
     "postinstall": "electron-builder install-app-deps",
@@ -59,8 +59,7 @@
     "mkdirp": "^0.5.1",
     "mt-files-downloader": "git+https://github.com/FaisalUmair/mt-files-downloader-wrapper.git",
     "node-vtt-to-srt": "git+https://github.com/riazXrazor/vtt-to-srt.git",
-    "sanitize-filename": "^1.6.1",
-    "socket.io": "^2.2.0"
+    "sanitize-filename": "^1.6.1"
   },
   "contributors": [
     {

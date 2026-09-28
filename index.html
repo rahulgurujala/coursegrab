@@ -36,12 +36,13 @@
     <main id="login" class="login">
       <div class="login-card">
         <div class="login-head">
-          <img src="assets/images/build/icon.png" alt="" />
+          <img src="assets/images/logo.svg" alt="" />
           <h1 data-i18n>Sign in to Udemy</h1>
           <p data-i18n>CourseGrab opens Udemy's own sign-in window and keeps only a session token on this computer.</p>
         </div>
 
         <div class="login-actions">
+          <p class="notice error" id="login-error" role="alert" hidden></p>
           <div class="business-row">
             <label for="business" data-i18n>Udemy Business</label>
             <span class="switch"><input type="checkbox" id="business" /><span class="track"></span></span>
@@ -59,21 +60,16 @@
 
           <div class="divider"><span data-i18n>Or</span></div>
 
-          <div class="method-buttons">
-            <button class="btn" id="method-token" type="button" aria-expanded="false" aria-controls="token-panel">
-              <svg class="icon"><use href="#i-key" /></svg><span data-i18n>Access Token</span>
-            </button>
-            <button class="btn" id="login-authenticator" type="button" disabled aria-describedby="auth-hint">
-              <svg class="icon"><use href="#i-browser" /></svg><span data-i18n>Authenticator</span>
-            </button>
-          </div>
-          <p class="hint" id="auth-hint" data-i18n>Authenticator works when the Udeler Authenticator browser extension is connected.</p>
+          <button class="btn block" id="method-token" type="button" aria-expanded="false" aria-controls="token-panel">
+            <svg class="icon"><use href="#i-key" /></svg><span data-i18n>Access Token</span>
+          </button>
 
           <div class="panel" id="token-panel" hidden>
             <div class="field">
               <label for="token" data-i18n>Access Token</label>
               <input class="input" id="token" type="password" autocomplete="off" spellcheck="false" />
               <p class="hint" data-i18n>While signed in to Udemy in your browser, copy the value of the access_token cookie.</p>
+              <p class="notice error" id="token-error" role="alert" hidden></p>
             </div>
             <div class="row">
               <button class="btn" id="token-cancel" type="button" data-i18n>Cancel</button>
@@ -81,18 +77,9 @@
             </div>
           </div>
 
-          <div class="panel" id="auth-panel" hidden role="status">
-            <div class="status-line" style="--show-display: flex">
-              <span class="spinner"></span><span data-i18n>Awaiting Login Request</span>
-            </div>
-            <p class="hint" data-i18n>Sign in to Udemy in your browser. CourseGrab will pick it up automatically.</p>
-            <div class="row"><button class="btn" id="auth-cancel" type="button" data-i18n>Cancel</button></div>
-          </div>
-
-          <p class="notice error" id="login-error" role="alert" hidden></p>
         </div>
 
-        <p class="login-foot" data-i18n>Free and open source. A fork of Udeler by Faisal Umair.</p>
+        <p class="login-foot" data-i18n>Free and open source. Made by rahulgurujala, based on Udeler by Faisal Umair.</p>
       </div>
     </main>
 
@@ -100,7 +87,7 @@
     <div id="app" class="app" hidden>
       <aside class="sidebar">
         <div class="brand">
-          <img src="assets/images/build/icon.png" alt="" />
+          <img src="assets/images/logo.svg" alt="" />
           <span>CourseGrab</span>
         </div>
         <nav class="nav" aria-label="Main">
@@ -262,7 +249,7 @@
           <header class="view-head"><h1 id="h-about" data-i18n>About</h1></header>
           <div class="view-body narrow">
             <div class="about-hero">
-              <img src="assets/images/build/icon.png" alt="" />
+              <img src="assets/images/logo.svg" alt="" />
               <div class="grow">
                 <h2>CourseGrab</h2>
                 <p>v<span id="app-version"></span></p>
@@ -300,8 +287,12 @@
             <div class="group">
               <h2 data-i18n>Credits</h2>
               <div class="list">
-                <a class="link-row" href="https://github.com/FaisalUmair/udemy-downloader-gui">
-                  <div class="grow"><div>FaisalUmair/udemy-downloader-gui</div><div class="desc" data-i18n>Original project (formerly Udeler), released under the MIT License.</div></div>
+                <a class="link-row" href="https://github.com/rahulgurujala">
+                  <div class="grow"><div>rahulgurujala</div><div class="desc" data-i18n>Creator and maintainer</div></div>
+                  <svg class="icon flip"><use href="#i-external" /></svg>
+                </a>
+                <a class="link-row small" href="https://github.com/FaisalUmair/udemy-downloader-gui">
+                  <div class="grow"><span data-i18n>Based on Udeler by Faisal Umair (MIT)</span></div>
                   <svg class="icon flip"><use href="#i-external" /></svg>
                 </a>
               </div>

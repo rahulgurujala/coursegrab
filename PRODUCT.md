@@ -6,36 +6,38 @@
 
 web
 
-(Electron desktop app for Windows, macOS and Linux; the renderer is HTML/CSS/JS.)
+An Electron desktop app for Windows, macOS and Linux. The renderer is HTML, CSS and JavaScript.
 
 ## Users
-Udemy learners who want offline copies of courses they are already enrolled in: individual students, and employees on Udemy Business company subdomains. They start long, multi-course downloads and leave them running in the background, so they return to check progress, pause/resume, or fix a failed lecture.
+Udemy learners who want offline copies of courses they are already enrolled in: individual students, and employees on Udemy Business company subdomains. They start long, multi-course downloads and leave them running in the background, so they return to check progress, pause or resume, or fix a failed lecture.
 
 ## Product Purpose
 CourseGrab logs the user into Udemy, lists the courses they are subscribed to, and downloads lecture videos, subtitles and attachments into an organised folder structure on disk. Success: the user finds a course fast, starts a download with the right options, trusts it is progressing, and ends with a complete, well-organised folder.
 
 ## Positioning
-A free, ad-free, cross-platform desktop downloader with no accounts of its own. It only accesses courses the user is enrolled in, using their own Udemy authentication. Maintained fork of FaisalUmair/udemy-downloader-gui (formerly Udeler), renamed CourseGrab.
+A free, ad-free, cross-platform desktop downloader with no accounts of its own. It only accesses courses the user is enrolled in, using their own Udemy authentication. Created and maintained by rahulgurujala; based on Udeler by Faisal Umair (FaisalUmair/udemy-downloader-gui, MIT, archived), renamed CourseGrab.
 
 ## Operating Context
-- Sign-in methods: Udemy login window (credentials), an access token pasted by the user, or the original author's "Udeler Authenticator" Chrome extension talking to a local socket.io server inside the app. Udemy Business users supply a company subdomain.
-- Views today: Login, Courses (search + list), Downloads (per-course progress, pause/resume/cancel), Settings, About, plus modals (subtitle language picker, update available) and full-screen loading states.
+- Sign-in methods: Udemy login window (credentials; the app watches for the access_token cookie) or an access token pasted by the user. Udemy Business users supply a company subdomain.
+- Views: Sign in, Courses (search and list), Downloads (per-course progress with pause, resume, cancel, open folder and retry), Settings and About, plus dialogs for the subtitle language and logout confirmation.
 - Downloads are long-running; the window may be open for hours. Course lists can be large; search filters them.
-- Interface language is user-selectable (English plus about 20 locales, including Arabic which mirrors the sidebar to the right, i.e. RTL support must be preserved). Strings are translated by English text key via `translate()` and `locale/*.json`.
+- Interface language is user-selectable (English plus more than 20 locales, including Arabic and Persian, so right to left support must be preserved). Strings are translated by English text key through `translate()` and `locale/*.json`.
 
 ## Capabilities and Constraints
-- Settings: download path, download start/end lecture range, skip attachments, video quality (Auto, Lowest, 360p to 1080p, Highest), skip subtitles, auto retry (experimental), language.
-- Window is resizable, default 1040x720, minimum 720x520 (confirmed; was fixed 550x700).
+- Settings: download path, video quality (Auto, Highest, 1080p to 360p, Lowest), subtitles on or off, attachments on or off, lecture range, auto retry (experimental), language. They save as they change.
+- The window is resizable: default 1040 by 720, minimum 720 by 520.
 - UI is jQuery plus custom CSS (`assets/css/app.css`, tokens in DESIGN.md); Semantic UI was removed. Markup is static in `index.html`, rows are built by `assets/js/ui.js`, and the download engine in `assets/js/app.js` must keep working.
-- Renderer runs with nodeIntegration and contextIsolation off (Electron 44); the Udemy login window is a separate default-sandboxed BrowserWindow.
-- Existing app icons (`assets/images/build/icon.*`) are kept for now.
+- The renderer runs with nodeIntegration on and contextIsolation off (Electron 44). The Udemy sign in window is a separate, default-sandboxed BrowserWindow.
+- Settings and the saved login live in a user data folder named `Udeler`, kept from the earlier version so existing users stay signed in.
+- Releases are automated: `dev` receives work, `main` receives releases, and release-please builds the changelog and version (see CONTRIBUTING.md).
+- App logo: a "C" holding a play button on a cobalt rounded square (`assets/images/logo.svg`; app icons in `assets/images/build/` are generated from `icon.svg` with `bunx electron scripts/make-icons.js`).
 
 ## Brand Commitments
 Visual direction (user-confirmed): clean, modern, professional, simple but full-featured. No themed or decorative worlds. Craft bar: Apple Music/Podcasts (macOS), Raycast/Arc, Notion/Vercel dashboard, Linear. Light and dark themes, both polished, following the OS setting.
-Name is CourseGrab. It is a fork and must keep a visible credit to the original project. No donate section. Tone is a plain utility: free, no ads, no accounts.
+The name is CourseGrab. It is based on Udeler and keeps a small credit to Faisal Umair (README, About page, sign in footer, LICENSE) next to the maintainer's name, rahulgurujala. There is no donate section. The tone is a plain utility: free, no ads, no accounts. Copy and documentation avoid em dashes.
 
 ## Evidence on Hand
-No customer quotes, benchmarks or usage data. Old demo GIF was removed. No screenshots or marketing assets for the new brand yet.
+No customer quotes, benchmarks or usage data. README screenshots in `docs/images/` use synthetic sample courses, never a real account.
 
 ## Product Principles
 1. Downloads are the product: progress, state and recovery must be legible at a glance and after hours away.
@@ -45,4 +47,4 @@ No customer quotes, benchmarks or usage data. Old demo GIF was removed. No scree
 5. Feels trustworthy for handling a Udemy login: no surprises, clear sign-in and sign-out states.
 
 ## Accessibility & Inclusion
-Keyboard operable, visible focus, sufficient contrast, and RTL (Arabic) support. Respect the OS light/dark preference.
+Keyboard operable, visible focus, sufficient contrast, and right to left support. Respect the operating system light or dark preference.
