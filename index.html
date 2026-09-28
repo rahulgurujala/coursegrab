@@ -42,6 +42,7 @@
         </div>
 
         <div class="login-actions">
+          <p class="notice error" id="login-error" role="alert" hidden></p>
           <div class="business-row">
             <label for="business" data-i18n>Udemy Business</label>
             <span class="switch"><input type="checkbox" id="business" /><span class="track"></span></span>
@@ -74,6 +75,7 @@
               <label for="token" data-i18n>Access Token</label>
               <input class="input" id="token" type="password" autocomplete="off" spellcheck="false" />
               <p class="hint" data-i18n>While signed in to Udemy in your browser, copy the value of the access_token cookie.</p>
+              <p class="notice error" id="token-error" role="alert" hidden></p>
             </div>
             <div class="row">
               <button class="btn" id="token-cancel" type="button" data-i18n>Cancel</button>
@@ -89,7 +91,6 @@
             <div class="row"><button class="btn" id="auth-cancel" type="button" data-i18n>Cancel</button></div>
           </div>
 
-          <p class="notice error" id="login-error" role="alert" hidden></p>
         </div>
 
         <p class="login-foot" data-i18n>Free and open source. A fork of Udeler by Faisal Umair.</p>

@@ -50,11 +50,17 @@ io.on("connect", function(socket) {
 
   socket.on("newLogin", function(data) {
     if (awaitingLogin) {
-      awaitingLogin = false;
-      $("#auth-panel").prop("hidden", true);
-      settings.set("access_token", data.access_token);
-      settings.set("subdomain", data.subdomain);
-      checkLogin();
+      var sub = data.subdomain || "www";
+      verifyToken(data.access_token, sub).then(function(result) {
+        if (!awaitingLogin) return;
+        awaitingLogin = false;
+        $("#auth-panel").prop("hidden", true);
+        if (result.ok) {
+          completeLogin(data.access_token, sub);
+        } else {
+          showLoginError(tokenErrorText(result.status));
+        }
+      });
     }
   });
 });
@@ -76,6 +82,7 @@ $(document).on("click", 'a[href^="http"]', function(e) {
 
 function showLoginError(message) {
   $("#login-error").text(message).prop("hidden", false);
+  $("#login-error")[0].scrollIntoView({ block: "nearest" });
 }
 
 function hideLoginError() {
@@ -97,6 +104,7 @@ $("#method-token").click(function() {
 
 $("#token-cancel").click(function() {
   $("#token-panel").prop("hidden", true);
+  $("#token-error").prop("hidden", true);
   $("#token").val("");
   $("#method-token").attr("aria-expanded", false);
 });
@@ -123,64 +131,132 @@ function businessName() {
   return name;
 }
 
+// A token only counts once Udemy accepts it; this also filters out anonymous visitor tokens.
+function verifyToken(token, sub) {
+  return new Promise(function(resolve) {
+    $.ajax({
+      type: "GET",
+      url: `https://${sub}.udemy.com/api-2.0/users/me/subscribed-courses?page_size=1`,
+      headers: { Authorization: `Bearer ${token}` },
+      success: function() {
+        resolve({ ok: true });
+      },
+      error: function(xhr) {
+        resolve({ ok: false, status: xhr.status });
+      }
+    });
+  });
+}
+
+function completeLogin(token, sub) {
+  settings.set("access_token", token);
+  settings.set("subdomain", sub);
+  checkLogin();
+}
+
+function tokenErrorText(status) {
+  return status == 401 || status == 403
+    ? translate("Udemy rejected this token. Copy a fresh access_token cookie while you are signed in, then try again.")
+    : translate("Could not reach Udemy. Check your connection and try again.");
+}
+
+// Udemy's website no longer sends an Authorization header, so the sign-in window is watched for the
+// access_token cookie instead. Each new cookie value is verified before it is accepted.
 function loginWithUdemy() {
   hideLoginError();
   var business = businessName();
   if (business === false) return;
+  var sub = business || "www";
+  var ses = remote.session.defaultSession;
   var parent = remote.getCurrentWindow();
   var dimensions = parent.getSize();
-  var session = remote.session;
-  let udemyLoginWindow = new BrowserWindow({
+  var loginWindow = new BrowserWindow({
     width: dimensions[0] - 100,
     height: dimensions[1] - 100,
     parent,
     modal: true
   });
+  var finished = false;
+  var rejected = {};
+  var timer = null;
 
-  session.defaultSession.webRequest.onBeforeSendHeaders(
-    { urls: ["*://*.udemy.com/*"] },
-    function(request, callback) {
-      if (request.requestHeaders.Authorization) {
-        settings.set(
-          "access_token",
-          request.requestHeaders.Authorization.split(" ")[1]
-        );
-        settings.set("subdomain", new URL(request.url).hostname.split(".")[0]);
-        udemyLoginWindow.destroy();
-        session.defaultSession.clearStorageData();
-        session.defaultSession.webRequest.onBeforeSendHeaders(
-          { urls: ["*://*.udemy.com/*"] },
-          function(request, callback) {
-            callback({ requestHeaders: request.requestHeaders });
-          }
-        );
-        checkLogin();
-      }
-      callback({ requestHeaders: request.requestHeaders });
-    }
-  );
-  if (business) {
-    udemyLoginWindow.loadURL(`https://${business}.udemy.com`);
-  } else {
-    udemyLoginWindow.loadURL("https://www.udemy.com/join/login-popup");
+  function stop() {
+    finished = true;
+    clearInterval(timer);
   }
+
+  loginWindow.on("closed", stop);
+
+  async function check() {
+    if (finished) return;
+    var cookies = await ses.cookies.get({ name: "access_token" });
+    for (var c of cookies) {
+      if (finished) return;
+      var domain = (c.domain || "").replace(/^\./, "");
+      if (!c.value || rejected[c.value] || !domain.endsWith("udemy.com")) continue;
+      rejected[c.value] = true;
+      var result = await verifyToken(c.value, sub);
+      if (finished) return;
+      if (result.ok) {
+        stop();
+        if (!loginWindow.isDestroyed()) loginWindow.destroy();
+        await ses.clearStorageData({ storages: ["cookies"] });
+        completeLogin(c.value, sub);
+        return;
+      }
+      // a network hiccup should not blacklist a good token
+      if (result.status != 401 && result.status != 403) delete rejected[c.value];
+    }
+  }
+
+  // start from a clean session so the sign-in form is shown, then watch for the cookie
+  ses
+    .clearStorageData({ storages: ["cookies"] })
+    .then(function() {
+      timer = setInterval(check, 1000);
+      return loginWindow.loadURL(
+        business
+          ? `https://${business}.udemy.com`
+          : "https://www.udemy.com/join/login-popup"
+      );
+    })
+    .catch(function() {});
+}
+
+function setTokenBusy(busy) {
+  $("#token-submit").prop("disabled", busy);
+  $("#token-submit .spinner").remove();
+  if (busy) $("#token-submit").prepend('<span class="spinner"></span>');
 }
 
 function loginWithAccessToken() {
   hideLoginError();
+  $("#token-error").prop("hidden", true);
   var business = businessName();
   if (business === false) return;
-  var token = $("#token").val().trim();
+  var token = $("#token")
+    .val()
+    .trim()
+    .replace(/^bearer\s+/i, "")
+    .replace(/^["']|["']$/g, "");
   if (!token) {
     $("#token").focus();
     return;
   }
-  settings.set("access_token", token);
-  settings.set("subdomain", business || "www");
-  $("#token").val("");
-  $("#token-panel").prop("hidden", true);
-  $("#method-token").attr("aria-expanded", false);
-  checkLogin();
+  var sub = business || "www";
+  setTokenBusy(true);
+  verifyToken(token, sub).then(function(result) {
+    setTokenBusy(false);
+    if (result.ok) {
+      $("#token").val("");
+      $("#token-panel").prop("hidden", true);
+      $("#method-token").attr("aria-expanded", false);
+      completeLogin(token, sub);
+    } else {
+      $("#token-error").text(tokenErrorText(result.status)).prop("hidden", false);
+      $("#token").focus();
+    }
+  });
 }
 
 function showApp() {
