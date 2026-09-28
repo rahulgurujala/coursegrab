@@ -62,15 +62,15 @@ Any contributions are welcome, if you plan to contribute please read the [contri
 ### Prerequisites:
 
 ```
-You must have npm and nodejs installed.
+You must have [bun](https://bun.sh) and Node.js installed.
 ```
 
 ### To use the application:
 
 ```
 1. Clone the project
-2. Run npm install
-3. Run npm start
+2. Run bun install
+3. Run bun start
 ```
 
 ### Build:
@@ -78,41 +78,41 @@ You must have npm and nodejs installed.
 Detect Platform:
 
 ```
-npm run dist
+bun run dist
 ```
 
 Windows:
 
 ```
-npm run build-win
+bun run build-win
 ```
 
 Mac:
 
 ```
-npm run build-mac
+bun run build-mac
 ```
 
 Linux:
 
 ```
-npm run build-linux
+bun run build-linux
 ```
 
 Cross Platform:
 
 ```
-npm run build
+bun run build
 ```
 
 #### To force 32 bit build:
 
-_Append "-- --ia32" to npm run command_
+_Append "--ia32" to bun run command_
 
 Example:
 
 ```
-npm run build-win -- --ia32
+bun run build-win --ia32
 ```
 
 ## Donate
