@@ -44,7 +44,7 @@ const ui = {
     $(".view").removeClass("active");
     $("#view-" + name).addClass("active");
     $(".nav-item").each(function() {
-      const on = $(this).data("view") == name;
+      const on = $(this).data("view") == (name == "course" ? "downloads" : name);
       on
         ? this.setAttribute("aria-current", "page")
         : this.removeAttribute("aria-current");
@@ -80,14 +80,15 @@ const ui = {
   <img class="thumb" src="${esc(c.image)}" alt="" loading="lazy">
   <div class="course-body">
     <h3 class="coursename">${esc(c.title)}</h3>
-    <p class="status-line" data-show="idle preparing downloading paused done error"><span class="status-text"></span></p>
-    <div class="meter" data-show="preparing downloading paused" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="${esc(c.title)}">
+    <p class="status-line" data-show="idle preparing downloading paused interrupted done error"><span class="status-text"></span></p>
+    <div class="meter" data-show="preparing downloading paused interrupted" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="${esc(c.title)}">
       <span class="meter-track"><span class="meter-fill"></span></span><span class="meter-pct">0%</span>
     </div>
     <p class="now-line" data-show="downloading paused" data-only="downloads"></p>
   </div>
   <div class="course-actions">
     <button class="btn primary download-btn" type="button" data-show="idle">${translate("Download")}</button>
+    <button class="btn primary download-btn" type="button" data-show="interrupted"><svg class="icon flip"><use href="#i-play"/></svg>${translate("Resume")}</button>
     <button class="btn ghost icon-only open-in-browser" type="button" data-show="idle" data-only="courses" title="${translate("Open on Udemy")}" aria-label="${translate("Open on Udemy")}"><svg class="icon flip"><use href="#i-external"/></svg></button>
     <button class="btn" type="button" disabled data-show="preparing"><span class="spinner"></span>${translate("Preparing")}</button>
     <button class="btn" type="button" data-goto="downloads" data-show="downloading paused" data-only="courses">${translate("View progress")}</button>
@@ -95,8 +96,10 @@ const ui = {
     <button class="btn primary resume-btn" type="button" data-show="paused" data-only="downloads"><svg class="icon flip"><use href="#i-play"/></svg>${translate("Resume")}</button>
     <button class="btn ghost cancel-btn" type="button" data-show="preparing downloading paused" data-only="downloads">${translate("Cancel")}</button>
     <button class="btn folder-btn" type="button" data-show="done"><svg class="icon"><use href="#i-folder"/></svg>${translate("Open folder")}</button>
+    <button class="btn update-btn" type="button" data-show="done" title="${translate("Download only what is new or changed")}"><svg class="icon"><use href="#i-retry"/></svg>${translate("Get updates")}</button>
     <button class="btn primary retry-btn" type="button" data-show="error"><svg class="icon"><use href="#i-retry"/></svg>${translate("Retry")}</button>
-    <button class="btn ghost icon-only remove-btn" type="button" data-show="idle done error" data-only="downloads" title="${translate("Remove from list")}" aria-label="${translate("Remove from list")}"><svg class="icon"><use href="#i-trash"/></svg></button>
+    <button class="btn ghost icon-only details-btn" type="button" data-show="preparing downloading paused interrupted done error" data-only="downloads" title="${translate("Details")}" aria-label="${translate("Details")}"><svg class="icon"><use href="#i-list"/></svg></button>
+    <button class="btn ghost icon-only remove-btn" type="button" data-show="idle interrupted done error" data-only="downloads" title="${translate("Remove from list")}" aria-label="${translate("Remove from list")}"><svg class="icon"><use href="#i-trash"/></svg></button>
   </div>
 </li>`;
   },
@@ -112,6 +115,7 @@ const ui = {
   Row: {
     state($c, state) {
       $c.attr("data-state", state);
+      if (typeof courseDetail != "undefined") courseDetail.headerChanged($c.first().attr("course-id"));
       if (state == "preparing") $c.find(".meter").removeAttr("aria-valuenow");
       ui.refreshDownloads();
     },
@@ -128,6 +132,11 @@ const ui = {
       $c.find(".meter-fill").css("--p", pct / 100);
       $c.find(".meter-pct").text(pct + "%");
       $c.find(".meter").attr("aria-valuenow", pct);
+      // save the list now and then while downloading, so a crash keeps an accurate percentage
+      if (Date.now() - (ui.lastSave || 0) > 5000 && !$("#app").prop("hidden")) {
+        ui.lastSave = Date.now();
+        saveDownloads(false);
+      }
     }
   },
 
@@ -157,6 +166,7 @@ const ui = {
       count("downloading") + count("paused") + count("preparing");
     const failed = count("error");
     const done = count("done");
+    const interrupted = count("interrupted");
     const $badge = $("#downloads-badge");
     if (active || failed) {
       $badge
@@ -170,6 +180,7 @@ const ui = {
     if (active) parts.push(`<bdi>${active}</bdi> ${esc(translate("active"))}`);
     if (done) parts.push(`<bdi>${done}</bdi> ${esc(translate("completed"))}`);
     if (failed) parts.push(`<bdi>${failed}</bdi> ${esc(translate("failed"))}`);
+    if (interrupted) parts.push(`<bdi>${interrupted}</bdi> ${esc(translate("interrupted"))}`);
     $("#downloads-summary").html(parts.join(" · "));
     $('.nav-item[data-view="downloads"]').attr(
       "aria-label",
@@ -178,6 +189,11 @@ const ui = {
     );
     $("#downloads-empty").prop("hidden", !!$rows.length);
     $("#clear-finished").prop("hidden", !done);
+    // keep the list on disk, so an unexpected quit still leaves resumable rows behind
+    clearTimeout(ui.saveTimer);
+    ui.saveTimer = setTimeout(function() {
+      if (!$("#app").prop("hidden")) saveDownloads(false);
+    }, 1500);
   }
 };
 
@@ -190,8 +206,22 @@ $(document).on("click", "[data-goto]", function() {
   ui.showView($(this).data("goto"));
 });
 
+// A click on a course in Downloads (outside its buttons) opens the lecture list.
+$(document).on("click", "#downloads-list .course", function(e) {
+  if ($(e.target).closest("button, a").length) return;
+  courseDetail.open($(this).attr("course-id"));
+});
+
+$(document).on("click", "#downloads-list .details-btn", function() {
+  courseDetail.open($(this).closest(".course").attr("course-id"));
+});
+
 $(document).on("keydown", e => {
   if (document.querySelector("dialog[open]")) return;
+  if (e.key == "Escape" && $("#view-course").hasClass("active")) {
+    ui.showView("downloads");
+    return;
+  }
   if (e.target.matches("input, select, textarea")) {
     if (e.key == "Escape" && e.target.id == "search-input") {
       $("#search-clear").click();

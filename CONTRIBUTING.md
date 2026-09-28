@@ -36,7 +36,9 @@ COURSEGRAB_USER_DATA=/tmp/coursegrab-dev bun start
 | ---- | ------- |
 | `index.js` | Electron main process: window, menu, data folder |
 | `index.html` | Static markup for every screen and dialog |
-| `assets/js/app.js` | Sign in, course list, settings, download engine |
+| `assets/js/app.js` | Sign in, course list, settings, download controls |
+| `assets/js/engine.js` | Download engine: reads a course, plans updates, saves files |
+| `assets/js/details.js` | Course details view: every lecture and its live state |
 | `assets/js/ui.js` | Views, dialogs, toasts and the course row component |
 | `assets/js/settings.js` | Settings file in the user data folder |
 | `assets/css/app.css` | All styles, with light and dark themes |
@@ -83,7 +85,7 @@ A CI check validates the title of every pull request.
 - **Styles** use the tokens at the top of `assets/css/app.css` and follow [DESIGN.md](DESIGN.md). Do not hard code colors, sizes or radii. Check both light and dark themes.
 - **Layout** uses logical properties (`margin-inline-start`, not `margin-left`) so right to left languages mirror correctly.
 - **Accessibility:** every control needs a keyboard path, a visible focus state and an accessible name. Icon only buttons need an `aria-label` and a `title`.
-- **The download engine** in `assets/js/app.js` handles real files on disk. Change it carefully and test pause, resume, cancel and completion.
+- **The download engine** in `assets/js/engine.js` handles real files on disk. Change it carefully and test pause, resume, cancel, completion and a second download of the same course (only new or changed lectures should be fetched).
 - Do not add dependencies for something a few lines can do.
 
 ## Testing your change

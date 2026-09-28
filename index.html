@@ -29,6 +29,8 @@
       <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5" /><path d="M12 16h.01" /></symbol>
       <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4" /><path d="M11 12l9-9" /><path d="M16 7l3 3" /></symbol>
       <symbol id="i-browser" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18" /></symbol>
+      <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" /></symbol>
+      <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11" /><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" /></symbol>
       <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16" /><path d="M9 7V4h6v3" /><path d="M6 7l1 13h10l1-13" /></symbol>
     </svg>
 
@@ -167,6 +169,35 @@
           </div>
         </section>
 
+        <!-- Course details -->
+        <section class="view" id="view-course" aria-labelledby="h-course">
+          <header class="view-head">
+            <button class="btn ghost icon-only" id="course-back" type="button" title="Back to Downloads" aria-label="Back to Downloads" data-i18n-aria="Back to Downloads">
+              <svg class="icon flip"><use href="#i-back" /></svg>
+            </button>
+            <div class="grow">
+              <h1 id="h-course"></h1>
+              <p class="sub" id="course-summary" aria-live="polite"></p>
+            </div>
+            <div class="head-actions" id="course-actions"></div>
+          </header>
+          <div class="view-body">
+            <p class="notice" id="course-notice" role="status" hidden></p>
+            <div class="chips" id="course-filters" role="group" aria-label="Filter lectures" data-i18n-aria="Filter lectures">
+              <button class="chip" type="button" data-filter="all" aria-pressed="true"><span data-i18n>All</span> <span class="n"></span></button>
+              <button class="chip" type="button" data-filter="active" aria-pressed="false"><span data-i18n>Waiting</span> <span class="n"></span></button>
+              <button class="chip" type="button" data-filter="changes" aria-pressed="false"><span data-i18n>New or changed</span> <span class="n"></span></button>
+              <button class="chip" type="button" data-filter="skipped" aria-pressed="false"><span data-i18n>Skipped</span> <span class="n"></span></button>
+              <button class="chip" type="button" data-filter="failed" aria-pressed="false"><span data-i18n>Failed</span> <span class="n"></span></button>
+            </div>
+            <div id="course-lectures"></div>
+            <div id="course-empty" class="empty" hidden>
+              <svg class="icon"><use href="#i-search" /></svg>
+              <strong data-i18n>No lectures match this filter</strong>
+            </div>
+          </div>
+        </section>
+
         <!-- Settings -->
         <section class="view" id="view-settings" aria-labelledby="h-settings">
           <header class="view-head"><h1 id="h-settings" data-i18n>Settings</h1></header>
@@ -280,7 +311,7 @@
               <h2 data-i18n>Keyboard shortcuts</h2>
               <div class="list">
                 <div class="setting"><span class="title" data-i18n>Focus search</span><div class="control"><kbd>/</kbd></div></div>
-                <div class="setting"><span class="title" data-i18n>Switch view</span><div class="control"><kbd>Ctrl/Cmd</kbd> + <kbd>1</kbd>–<kbd>4</kbd></div></div>
+                <div class="setting"><span class="title" data-i18n>Switch view</span><div class="control"><kbd>Ctrl/Cmd</kbd> + <kbd>1</kbd> to <kbd>4</kbd></div></div>
               </div>
             </div>
 
@@ -352,5 +383,7 @@
     </script>
     <script src="assets/js/ui.js"></script>
     <script src="assets/js/app.js"></script>
+    <script src="assets/js/engine.js"></script>
+    <script src="assets/js/details.js"></script>
   </body>
 </html>

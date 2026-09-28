@@ -690,6 +690,7 @@ button {
 .course[data-state="preparing"] [data-show~="preparing"],
 .course[data-state="downloading"] [data-show~="downloading"],
 .course[data-state="paused"] [data-show~="paused"],
+.course[data-state="interrupted"] [data-show~="interrupted"],
 .course[data-state="done"] [data-show~="done"],
 .course[data-state="error"] [data-show~="error"] {
   display: var(--show-display, block);
@@ -710,8 +711,214 @@ button {
 }
 
 #downloads-list .course-actions {
-  width: 210px;
+  min-width: 210px;
   justify-content: flex-end;
+}
+
+/* clickable download rows */
+#downloads-list .course {
+  cursor: pointer;
+}
+
+/* ---------- course details ---------- */
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.chip:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent);
+}
+
+.chip .n {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+.chapter {
+  margin-bottom: 20px;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
+}
+
+.chapter-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.chapter-title .count {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.lecture {
+  position: relative;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.lecture:first-child {
+  border-top: 0;
+}
+
+.lecture .lnum {
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.lecture .lbody {
+  display: grid;
+  min-width: 0;
+}
+
+.lecture .lname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lecture .lmeta {
+  font-size: 13px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lecture .lmeta:empty {
+  display: none;
+}
+
+.lecture .lstatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lecture[data-state="unchanged"] .lname,
+.lecture[data-state="outside"] .lname {
+  color: var(--text-muted);
+}
+
+.lecture[data-state="failed"] .lmeta {
+  color: var(--danger);
+}
+
+.lecture .lbar {
+  display: none;
+  grid-column: 2 / -1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.lecture[data-state="downloading"] .lbar {
+  display: block;
+}
+
+.lecture .lfill {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transform: scaleX(var(--p, 0));
+  transform-origin: left center;
+  transition: transform 0.3s var(--ease);
+}
+
+[dir="rtl"] .lecture .lfill {
+  transform-origin: right center;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--hover);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.pill.state-downloading,
+.pill.badge-new,
+.pill.badge-updated,
+.pill.badge-missing {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.pill.state-done,
+.pill.state-saved {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.pill.state-skipped {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.pill.state-failed {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+@media (max-width: 720px) {
+  .lecture {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .lecture .lstatus {
+    grid-column: 2;
+  }
 }
 
 /* meter */
@@ -745,7 +952,8 @@ button {
   transform-origin: right center;
 }
 
-.course[data-state="paused"] .meter-fill {
+.course[data-state="paused"] .meter-fill,
+.course[data-state="interrupted"] .meter-fill {
   background: var(--text-faint);
 }
 
