@@ -1,30 +1,20 @@
-# Udeler | Udemy Course Downloader (GUI)
+# CourseGrab | Udemy Course Downloader (GUI)
 
-A cross platform (Windows, Mac, Linux) desktop application for downloading Udemy Courses.
+A cross platform (Windows, Mac, Linux) desktop application for downloading the Udemy courses you are enrolled in.
 
-> **Maintained fork.** The original project ([FaisalUmair/udemy-downloader-gui](https://github.com/FaisalUmair/udemy-downloader-gui)) is archived and no longer maintained. This repository continues development. Credit and thanks to Faisal Umair and the original contributors. Prebuilt binaries below are from the last upstream release (v1.8.2) until new releases are published here.
-
-### Udeler 2.0 Feature Requests:
-
-I am planning to make Udeler 2.0 a big release with a lot of new features and improvements. For requesting a feature, open an [issue](https://github.com/rahulgurujala/udeler/issues)
+> **Fork notice.** CourseGrab is a maintained fork of [FaisalUmair/udemy-downloader-gui](https://github.com/FaisalUmair/udemy-downloader-gui) (formerly known as **Udeler**), which is archived and no longer maintained. Thanks to Faisal Umair and the original contributors. This fork is renamed, migrated to bun and Electron 44, and continues development here. Bugs and feature requests: [issues](https://github.com/rahulgurujala/coursegrab/issues).
 
 ### Facing Login Issues?
 
-Since Udeler v1.6.0, there is support for login through Udeler Authenticator (A chrome extension for easily authenticating a Udemy account with Udeler).
+Besides the built-in login window, you can log in through the **Udeler Authenticator** browser extension made by the original author (a chrome extension for authenticating a Udemy account with the desktop app).
 
-#### How to use Udeler Authenticator?
+#### How to use the Authenticator extension?
 
-1. Install the extension from [here](https://www.udeler.com/extension)
+1. Install the extension from [here](https://www.udeler.com/extension) (original author's site; availability is not guaranteed).
 
-2. After installing/enabling the extension, open udeler desktop app, you will see a new anonymous icon on the login page. Click the icon and it will start to listen for any login requests from your chrome web browser.
+2. After installing/enabling the extension, open the CourseGrab desktop app, you will see a new anonymous icon on the login page. Click the icon and it will start to listen for any login requests from your chrome web browser.
 
-3. Open Udemy website on your chrome web browser and simply login to your account. Udeler app will detect the login and will let you in. If you are already logged in to Udemy, you can simply visit the website and it will still detect your account.
-
-#### Project Update:
-
-**`I am currently not able to give this project enough time to fix the current issues or add new features. I am busy with some other projects. But I do plan to fix all the issues and add some new features. So the maintenance is temporarily on hold and this project is not dead. I also plan to make a web only version of Udeler.`**
-
-![](https://i.imgur.com/nsaAgDU.gif)
+3. Open Udemy website on your chrome web browser and simply login to your account. CourseGrab will detect the login and will let you in. If you are already logged in to Udemy, you can simply visit the website and it will still detect your account.
 
 ### :fire: Features
 
@@ -38,16 +28,11 @@ Since Udeler v1.6.0, there is support for login through Udeler Authenticator (A 
 ### Disclaimer:
 
 This software is intended to help you download Udemy courses for personal use only. Sharing the content of your subscribed courses is strictly prohibited under Udemy Terms of Use. Each and every course on Udemy is subjected to copyright infringement.
-This software does not magically download any paid course available on Udemy, you need to provide your Udemy login credentials to download the courses you have enrolled in. Udeler downloads the lecture videos by simply using the source of the video player returned to the user by Udemy after proper authentication, you can also do the same manually. Many download managers use same method to download videos on a web page. This app only automates the process of a user doing this manually in a web browser.
+This software does not magically download any paid course available on Udemy, you need to provide your Udemy login credentials to download the courses you have enrolled in. CourseGrab downloads the lecture videos by simply using the source of the video player returned to the user by Udemy after proper authentication, you can also do the same manually. Many download managers use same method to download videos on a web page. This app only automates the process of a user doing this manually in a web browser.
 
 ### Downloads:
 
-| Platform | Arch    | Version | Link                                                                                                                         |
-| -------- | ------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Windows  | x64     | 1.8.2   | [Download](https://github.com/FaisalUmair/udemy-downloader-gui/releases/download/v1.8.2/Udeler-Setup-1.8.2-windows-x64.exe)  |
-| Windows  | x86     | 1.8.2   | [Download](https://github.com/FaisalUmair/udemy-downloader-gui/releases/download/v1.8.2/Udeler-Setup-1.8.2-windows-x86.exe)  |
-| Mac      | x64     | 1.8.2   | [Download](https://github.com/FaisalUmair/udemy-downloader-gui/releases/download/v1.8.2/Udeler-1.8.2-mac.dmg)                |
-| Linux    | x86_x64 | 1.8.2   | [Download](https://github.com/FaisalUmair/udemy-downloader-gui/releases/download/v1.8.2/Udeler-1.8.2-linux-x86_x64.AppImage) |
+No prebuilt binaries have been published for CourseGrab yet. Build from source (see below); releases will appear on the [Releases](https://github.com/rahulgurujala/coursegrab/releases) page.
 
 ### Note:
 
@@ -57,7 +42,7 @@ By default the courses will be downloaded to the user's Download folder. The str
 
 ### Contributing:
 
-Any contributions are welcome, if you plan to contribute please read the [contributing](https://github.com/rahulgurujala/udeler/blob/main/CONTRIBUTING.md) docs first.
+Any contributions are welcome, if you plan to contribute please read the [contributing](https://github.com/rahulgurujala/coursegrab/blob/main/CONTRIBUTING.md) docs first.
 
 ### Prerequisites:
 
@@ -115,8 +100,6 @@ Example:
 bun run build-win --ia32
 ```
 
-## Donate
+## Credits
 
-Udeler is free and without any ads. If you appreciate that, please consider donating to the Developer.
-
-[![Donate](https://raw.githubusercontent.com/FaisalUmair/udemy-downloader-gui/master/assets/images/donate.png)](https://www.udeler.com/donate)
+Original project by [Faisal Umair](https://github.com/FaisalUmair) ([FaisalUmair/udemy-downloader-gui](https://github.com/FaisalUmair/udemy-downloader-gui)), released under the MIT License. See [LICENSE](LICENSE).
