@@ -2,9 +2,11 @@
 
 A cross platform (Windows, Mac, Linux) desktop application for downloading Udemy Courses.
 
+> **Maintained fork.** The original project ([FaisalUmair/udemy-downloader-gui](https://github.com/FaisalUmair/udemy-downloader-gui)) is archived and no longer maintained. This repository continues development. Credit and thanks to Faisal Umair and the original contributors. Prebuilt binaries below are from the last upstream release (v1.8.2) until new releases are published here.
+
 ### Udeler 2.0 Feature Requests:
 
-I am planning to make Udeler 2.0 a big release with a lot of new features and improvements. For requesting a feature, Click [here](https://github.com/FaisalUmair/udemy-downloader-gui/issues/172)
+I am planning to make Udeler 2.0 a big release with a lot of new features and improvements. For requesting a feature, open an [issue](https://github.com/rahulgurujala/udeler/issues)
 
 ### Facing Login Issues?
 
@@ -55,7 +57,7 @@ By default the courses will be downloaded to the user's Download folder. The str
 
 ### Contributing:
 
-Any contributions are welcome, if you plan to contribute please read the [contributing](https://github.com/FaisalUmair/udemy-downloader-gui/blob/master/CONTRIBUTING.md) docs first.
+Any contributions are welcome, if you plan to contribute please read the [contributing](https://github.com/rahulgurujala/udeler/blob/master/CONTRIBUTING.md) docs first.
 
 ### Prerequisites:
 

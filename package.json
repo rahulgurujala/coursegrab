@@ -3,7 +3,11 @@
   "version": "1.8.2",
   "repository": {
     "type": "git",
-    "url": "https://github.com/FaisalUmair/udemy-downloader-gui.git"
+    "url": "https://github.com/rahulgurujala/udeler.git"
+  },
+  "homepage": "https://github.com/rahulgurujala/udeler",
+  "bugs": {
+    "url": "https://github.com/rahulgurujala/udeler/issues"
   },
   "description": "A cross platform (Windows, Mac, Linux) desktop application for downloading Udemy Courses.",
   "scripts": {
