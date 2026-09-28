@@ -1,146 +1,131 @@
-# Contributing
+# Contributing to CourseGrab
 
-👍 🎉 Thanks for taking the time to contribute! 🎉 👍
+Thank you for helping improve CourseGrab. Bug reports, translations, documentation and code are all welcome. This guide explains how the project is organised and how to get a change merged.
 
-Any contributions to this repository are most welcome. If you are planning to contribute, please take time to read this file and follow the guidelines.
+By taking part you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-## How to
+## Ways to contribute
 
-#### There are quite a few ways to contribute, but following is the recommended approach.
+- **Report a bug.** [Open an issue](https://github.com/rahulgurujala/coursegrab/issues/new) and include your operating system, the CourseGrab version (Settings, About), what you did, what you expected and what happened. Screenshots help. Never paste your access token.
+- **Suggest a feature.** Open an issue that describes the problem you want solved, not only the solution.
+- **Translate the app.** See [Translations](#translations).
+- **Improve the docs.** Fixes to the README, this guide or the in-app text are always useful.
+- **Send code.** For anything larger than a small fix, open an issue first so we can agree on the approach.
 
-`1. Fork this repository`
+## Set up your environment
 
-When you fork this repository you will have a personal copy of the repository where you will have complete access to edit any file. 
-Edit the files you want to and commit the changes.
+You need [Bun](https://bun.sh) 1.x, [Node.js](https://nodejs.org) 22 or newer, and Git.
 
-`2. Make a Pull request`
-
-When you are done editing the file(s) and have commited the changes to the fork, you can now make a pull request to this repository.
-You will see a Pull request option alongside compare just above the Latest commit message in your fork. 
-Please beaware making a pull request to your own repository and making a pull request to this repository are two different things.
-You need to click on the `Pull request button` and not the `Pull requests tab`. 
-
-`3. Wait for the changes to get approved`
-
-After making a Pull request you will see your pull request listed in the `Pull requests section` in the original repository.
-Your changes will be reviewed and once the changes are approved they will be merged and hence will get applied to the original repository.
-You might be asked to improve or make further changes, if the the commits you made could not be approved for some reason. In that case, you will need to edit the files again. 
-Please note that, you do not have to make another pull request, just make the changes you are supposed to in the fork and it will get reflected in the already made pull request.
-
-
-## Adding translation
-
-This application aims to be available in multiple (as many as we can) languages. 
-The task could have been achieved by using a translation tool, but in order to maintain accuracy and context, this repository provides an easy way for the contributors native to different languges to add their language to the application.
-
-### Adding/Updating a language
-
-To add or update a language, follow the `Step 1` of  How to section above. 
-Once you have your fork ready, you can edit the required files.  
-
-#### Adding new language 
-
-`1. Edit meta.json file`
-
-You will find a meta.json file inside `locale` folder in your copy of repository. 
-The file contains language names and corresponding file name which has the actual translation data. In order to add a new language you simply have to add another field (key/value pair) to the file.
-
-Example:
-
-```javascript
-{
-  "Italian"       : "it.json",
-  "Español"       : "es.json", 
-  "LANGUAGE_NAME" : "LANGUAGE_SHORTNAME.json"
-}
+```sh
+git clone https://github.com/rahulgurujala/coursegrab.git
+cd coursegrab
+bun install
+git switch dev
+bun start
 ```
 
-#### Note: 
-LANGUAGE_NAME is the name of the language that will be displayed in the application and LANGUAGE_SHORTNAME is the shortname of the language and it will also be the name of the file that will contain the translation. 
-Please use appropriate shortnames (ISO 639-1 Code) and try not to use more than two alphabets to maintain consistency. 
-Do not add duplicate names, you may add a 3rd alphabet (use ISO 639-2 Code) in LANGUAGE_SHORTNAME to separate it from any existing one. 
+Run the app against a throwaway data folder so your real settings and login are never touched:
 
-There is no `comma ','` after the last pair in the file however there is one before that. 
-You would have to add a comma yourself since you will be adding the pair to the end of the file.
-
-Example:
-LANGUAGE_NAME = "Dutch" LANGUAGE_SHORTNAME = "nl"
-
-```javascript
-{
-  "Italian" : "it.json",
-  "Español" : "es.json", 
-  "Dutch"   : "nl.json"
-}
+```sh
+COURSEGRAB_USER_DATA=/tmp/coursegrab-dev bun start
 ```
-#### Reference:
-https://www.loc.gov/standards/iso639-2/php/code_list.php
-https://www.w3schools.com/tags/ref_language_codes.asp
 
-`2. Create a new file "LANGUAGE_SHORTNAME.json"`
+### Project layout
 
-Now that you have added the new language name and its corresponding shortname to the `meta.json` file, Next step will be to create the LANGUAGE_SHORTNAME.json file inside the `locale` folder.
-You will also find `template.json` file inside the same `locale` folder, just copy the contents of the template file and put them inside the LANGUAGE_SHORTNAME.json file.
+| Path | Purpose |
+| ---- | ------- |
+| `index.js` | Electron main process: window, menu, data folder |
+| `index.html` | Static markup for every screen and dialog |
+| `assets/js/app.js` | Sign in, course list, settings, download engine |
+| `assets/js/ui.js` | Views, dialogs, toasts and the course row component |
+| `assets/js/settings.js` | Settings file in the user data folder |
+| `assets/css/app.css` | All styles, with light and dark themes |
+| `locale/` | Translations |
+| `PRODUCT.md`, `DESIGN.md` | Who the app is for, and the design system |
 
-You should have something like this inside your LANGUAGE_SHORTNAME.json file.
-```javascript
-{
-  "Udemy Login": "",
-  "Email": "",
-  "Password": "",
-  "Login": "",
-  "Type Username/Password": "",
-  "Incorrect Username/Password": "",
-  "Logging in": "",
-  "Loading Courses": "",
-  "You have not enrolled in any course": "",
-  "Getting Info": "",
-  "Courses": ""
-}
+## Branches and pull requests
+
+- `dev` is where all work is merged. Branch from `dev` and open your pull request against `dev`.
+- `main` only receives releases. Do not open pull requests against `main`. The CI check rejects them unless they come from `dev`.
+- Use a short, descriptive branch name such as `fix/token-paste` or `feat/download-all`.
+- Keep pull requests focused. One change per pull request is easier to review and easier to release.
+- Pull requests into `dev` are squash merged, so the **pull request title** becomes the changelog entry.
+
+### Commit and pull request titles
+
+Titles follow [Conventional Commits](https://www.conventionalcommits.org). The type decides the next version number and where the change shows in the changelog.
+
+| Type | Use it for | Version bump | In changelog |
+| ---- | ---------- | ------------ | ------------ |
+| `feat:` | A new feature | minor | Features |
+| `fix:` | A bug fix | patch | Bug Fixes |
+| `perf:` | A performance improvement | patch | Performance |
+| `refactor:` | A code change with no behaviour change | none | Refactoring |
+| `docs:` | Documentation only | none | Documentation |
+| `chore:`, `ci:`, `test:`, `style:`, `build:` | Maintenance | none | hidden |
+
+Add `!` after the type (`feat!: ...`) or a `BREAKING CHANGE:` line in the body for a change that breaks existing behaviour. That bumps the major version.
+
+Examples:
+
+```text
+feat: add a keyboard shortcut for the Downloads view
+fix(login): accept a token pasted with quotes
+docs: explain the folder layout in the README
 ```
-Notice that you are aleady given the words that you need to add translation for. Just add the translation inside the empty quotes given next to each English word.
-Please do not add any new words as the words given are the only words that the app will look for.
 
-`3. Commit your changes and make a Pull request`
+A CI check validates the title of every pull request.
 
-Now that you have added the translation file, you can commit the changes and make a Pull request. (Follow Step 2 of How to Section)
+## Code guidelines
 
-#### Updating existing translation.
+- The app is plain JavaScript with jQuery, and the styles are hand written CSS. Please match the surrounding code instead of introducing new frameworks.
+- **Interface text** goes through `translate("English text")` in JavaScript or `data-i18n` in `index.html`, so it can be translated. The English text is the key.
+- **Styles** use the tokens at the top of `assets/css/app.css` and follow [DESIGN.md](DESIGN.md). Do not hard code colors, sizes or radii. Check both light and dark themes.
+- **Layout** uses logical properties (`margin-inline-start`, not `margin-left`) so right to left languages mirror correctly.
+- **Accessibility:** every control needs a keyboard path, a visible focus state and an accessible name. Icon only buttons need an `aria-label` and a `title`.
+- **The download engine** in `assets/js/app.js` handles real files on disk. Change it carefully and test pause, resume, cancel and completion.
+- Do not add dependencies for something a few lines can do.
 
-If you want to update an existing translation whether you are the one who created the translation file or not, follow the steps:
+## Testing your change
 
-##### Updating the LANGUAGE_NAME or LANGUAGE_SHORTNAME
+There is no automated UI test suite yet. Before you open a pull request:
 
-`1. Edit meta.json file` 
+1. Run the app with a throwaway data folder (see above) and try your change by hand, in both light and dark themes.
+2. For UI changes, check a narrow window as well (the minimum size is 720 by 520).
+3. Run the syntax check that CI runs:
 
-Edit meta.json file and update the LANGUAGE_NAME or LANGUAGE_SHORTNAME.
+   ```sh
+   for f in index.js assets/js/*.js; do node --check "$f"; done
+   ```
 
-Beaware that any change in LANGUAGE_SHORTNAME might also require to rename the actual file in the `locale` folder.
+4. For packaging changes, build once on your system, for example `bun run build-mac`.
 
-`2. Commit changes and make Pull request`
-Follow Step 2 of How to Section
+Include screenshots in the pull request for anything visual.
 
+## Translations
 
-##### Updating the translation
+Translations live in `locale/`, one JSON file per language. The keys are the English strings and the values are the translated text.
 
-You may want to update a translation file if you notice something is not correctly translated or a translation is missing either because it has missing value of the word was not added at all possibly because the `contributor` didn't add it or the `template.json` file was updated
+**Improve an existing language:** edit its file, for example `locale/de.json`, and fill in or correct the values. Missing keys fall back to English, so partial translations are fine.
 
-`1. Edit the translation file (LANGUAGE_SHORTNAME.json)` 
+**Add a new language:**
 
-Make the changes you want to. Do not add a word that is not present in template.json file. If you see a word that is not present in template.json file, you can remove it.
+1. Copy `locale/template.json` to `locale/<code>.json` (for example `locale/nl.json`) and fill in the values.
+2. Add the language to `locale/meta.json`, using its name in its own language as the key and the file name as the value.
+3. For a right to left language, also add its file name to the right to left list in `assets/js/ui.js` (search for `ar.json`).
 
-`2. Commit changes and make Pull request`
+When you add new interface text in code, add the English key to `locale/template.json` too.
 
-Follow Step 2 of How to Section
+## Releases
 
+Releases are automatic and are handled by the maintainer.
 
-### Note: 
-Please do not use any translation tools as it would defeat the purpose of the contribution.
+1. Pull requests are merged into `dev`.
+2. When a release is due, a pull request from `dev` to `main` is opened and merged with a **merge commit**, not a squash, so each change keeps its own changelog line.
+3. [release-please](https://github.com/googleapis/release-please) then opens a **Release PR** on `main` with the new version and the changelog.
+4. Merging that Release PR creates the tag (`vX.Y.Z`) and the GitHub Release. The same workflow builds installers for macOS, Windows and Linux and attaches them to the release. Installers are unsigned for now.
+5. A follow-up pull request merges `main` back into `dev`.
 
-## Branches and releases
+## Questions
 
-- `dev` is where all work is merged. Open pull requests against `dev` and squash-merge them.
-- `main` only receives releases. To ship, open a pull request from `dev` to `main` and merge it with a **merge commit** (not squash), so every change keeps its own changelog line.
-- Pull request titles use [Conventional Commits](https://www.conventionalcommits.org): `feat:` (minor), `fix:` (patch), `feat!:` or a `BREAKING CHANGE:` footer (major). `docs:`, `refactor:` and `perf:` show in the changelog; `chore:`, `ci:`, `test:`, `style:` and `build:` do not.
-- After a merge into `main`, [release-please](https://github.com/googleapis/release-please) opens a **Release PR** with the new version and `CHANGELOG.md`. Merging it tags the version, creates the GitHub Release and attaches installers for macOS, Windows and Linux. Installers are unsigned for now.
-
+Open an issue or start a discussion on GitHub. Please be patient: CourseGrab is maintained in spare time.
