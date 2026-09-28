@@ -1,5 +1,5 @@
 const electron = require("electron");
-const remote = electron.remote;
+const remote = require("@electron/remote");
 const dialog = remote.dialog;
 const BrowserWindow = remote.BrowserWindow;
 const fs = require("fs");
