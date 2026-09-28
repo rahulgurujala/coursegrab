@@ -9,6 +9,100 @@ const path = require("path");
 const MANIFEST_FILE = ".coursegrab.json";
 const SKIPPED_FILE = "Skipped lectures.txt";
 
+// What the course detail view shows: per course, every lecture and its state.
+//   state: queued | downloading | done | unchanged | skipped | failed | outside | saved
+//   badge: new | updated | missing (why a queued lecture will be downloaded)
+var courseStore = {};
+
+function touchStore(courseId, lectureId) {
+  if (typeof courseDetail != "undefined") courseDetail.touch(courseId, lectureId);
+}
+
+// Builds the store from a prepared course and its plan.
+function buildStore(courseId, title, dir, data, phase, showBadges) {
+  var store = { id: courseId, title: title, dir: dir, phase: phase, chapters: [], byId: {}, note: "" };
+  data.chapters.forEach(function(chapter, ci) {
+    var group = { name: chapter.name, lectures: [] };
+    chapter.lectures.forEach(function(lecture, li) {
+      var entry = { id: lecture.id, num: li + 1, name: lecture.name, state: "queued", badge: null, reason: "", pct: 0, size: null, note: "" };
+      if (lecture.type == "Skipped") {
+        entry.state = "skipped";
+        entry.reason = lecture.reason;
+      } else if (lecture.status == "outside") {
+        entry.state = "outside";
+      } else if (lecture.skip) {
+        entry.state = "unchanged";
+      } else {
+        // "new" on a first download is just noise; badges matter when comparing with an earlier download
+        entry.badge = showBadges ? lecture.status || null : null;
+      }
+      group.lectures.push(entry);
+      store.byId[entry.id] = entry;
+    });
+    store.chapters.push(group);
+  });
+  courseStore[courseId] = store;
+  return store;
+}
+
+// After a restart there is no live data: rebuild what is saved from the course folder's record.
+function storeFromManifest(courseId, title, dir) {
+  var manifest = readManifest(dir);
+  var store = { id: courseId, title: title, dir: dir, phase: "saved", chapters: [], byId: {}, note: "" };
+  courseStore[courseId] = store;
+  if (!manifest) return store;
+  var groups = {};
+  Object.keys(manifest.lectures).forEach(function(id) {
+    var m = manifest.lectures[id];
+    var parts = (m.primary || "").split(path.sep);
+    var chapter = parts.length > 1 ? parts[0] : "";
+    var file = parts[parts.length - 1] || m.title;
+    var num = parseInt(file, 10) || 0;
+    var chapterNum = parseInt(chapter, 10) || 0;
+    var key = chapterNum + "|" + chapter;
+    groups[key] = groups[key] || { order: chapterNum, name: chapter.replace(/^\d+\.\s*/, "") || translate("Lectures"), lectures: [] };
+    var size = null;
+    try {
+      size = fs.statSync(path.join(dir, m.primary)).size;
+    } catch (e) {}
+    var entry = { id: id, num: num, name: m.title, state: "saved", badge: null, reason: "", pct: 100, size: size, note: m.quality ? (/^\d+$/.test(String(m.quality)) ? m.quality + "p" : String(m.quality)) : "" };
+    groups[key].lectures.push(entry);
+    store.byId[id] = entry;
+  });
+  Object.keys(groups)
+    .map(function(k) {
+      return groups[k];
+    })
+    .sort(function(a, b) {
+      return a.order - b.order;
+    })
+    .forEach(function(g) {
+      g.lectures.sort(function(a, b) {
+        return a.num - b.num;
+      });
+      store.chapters.push(g);
+    });
+  courseStore[courseId] = store;
+  return store;
+}
+
+// Reads the course and compares it with what is saved, without downloading or changing any file.
+async function checkCourse(course, onProgress) {
+  var prep = { cancelled: false, failed: false };
+  var data = await prepareCourse(course, prep, onProgress);
+  var options = settings.getAll().download;
+  var dir = courseDir(course.title);
+  var inScope = {};
+  data.chapters.forEach(function(chapter) {
+    chapter.lectures.forEach(function(lecture) {
+      inScope[lecture.id] = true;
+    });
+  });
+  var plan = planUpdates(data, dir, options, inScope, true);
+  var store = buildStore(course.id, course.title, dir, data, "checked", plan.hadManifest);
+  return store;
+}
+
 // ---------- helpers ----------
 function api(url) {
   return new Promise(function(resolve, reject) {
@@ -262,7 +356,7 @@ async function prepareCourse(course, prep, onProgress) {
 
 // ---------- what needs downloading ----------
 // Compares the course with the manifest saved in its folder by an earlier download.
-function planUpdates(data, dir, options, inScope) {
+function planUpdates(data, dir, options, inScope, dryRun) {
   var manifest = readManifest(dir);
   var known = manifest ? manifest.lectures : {};
   var counts = { new: 0, updated: 0, missing: 0, unchanged: 0 };
@@ -292,11 +386,12 @@ function planUpdates(data, dir, options, inScope) {
         // the instructor replaced this video: fetch the new one
         lecture.status = "updated";
         var old = path.join(dir, entry.primary || primary);
-        removeQuietly(old, old + ".mtd", old.replace(/\.[^.]+$/, ".srt"), target, target + ".mtd");
+        if (!dryRun) removeQuietly(old, old + ".mtd", old.replace(/\.[^.]+$/, ".srt"), target, target + ".mtd");
       } else {
         // same content; follow a rename or reorder by moving the file instead of downloading again
         var oldPath = entry.primary ? path.join(dir, entry.primary) : target;
-        if (oldPath != target && fs.existsSync(oldPath) && !fs.existsSync(target)) {
+        var moved = oldPath != target && fs.existsSync(oldPath) && !fs.existsSync(target);
+        if (moved && !dryRun) {
           try {
             fs.mkdirSync(path.dirname(target), { recursive: true });
             fs.renameSync(oldPath, target);
@@ -307,7 +402,7 @@ function planUpdates(data, dir, options, inScope) {
         var wantsSubs = !options.skipSubtitles && !!lecture.caption;
         var wantsFiles = !options.skipAttachments && !!(lecture.supplementary && lecture.supplementary.length);
         var complete =
-          fs.existsSync(target) &&
+          (fs.existsSync(target) || (dryRun && moved)) &&
           !fs.existsSync(target + ".mtd") &&
           entry.done !== false &&
           (!wantsSubs || entry.subs) &&
@@ -378,6 +473,14 @@ async function initDownload($course, data, subtitle = false) {
   var done = 0;
   var total = 0;
 
+  var store = null;
+  var currentItem = null;
+  function mark(lecture, patch) {
+    if (!store || !store.byId[lecture.id]) return;
+    Object.assign(store.byId[lecture.id], patch);
+    touchStore(courseId, lecture.id);
+  }
+
   ui.Row.state(rows(), "downloading");
   ui.Row.now(rows(), "");
   rows().attr("data-path", dir);
@@ -389,6 +492,7 @@ async function initDownload($course, data, subtitle = false) {
     ui.Row.progress(rows(), done + (view.filePct || 0) / 100, total);
     ui.Row.text(rows(), (paused ? translate("Paused") + " · " : "") + parts.join(" · "));
     ui.Row.now(rows(), view.name + (view.filePct ? " · " + view.filePct + "%" : ""));
+    if (currentItem) mark(currentItem.lecture, { pct: view.filePct || 0, speed: paused ? 0 : view.speed, note: view.quality });
   }
 
   downloadControls[courseId] = {
@@ -418,6 +522,9 @@ async function initDownload($course, data, subtitle = false) {
         } catch (e) {}
         current.abort();
       }
+      if (currentItem) mark(currentItem.lecture, { state: "queued", pct: 0, speed: 0 });
+      if (store) store.phase = "idle";
+      touchStore(courseId);
       delete downloadControls[courseId];
       ui.Row.state(rows(), "idle");
       ui.Row.text(rows(), translate("Canceled"));
@@ -436,6 +543,7 @@ async function initDownload($course, data, subtitle = false) {
 
   function finish(kind, text) {
     if (cancelled) return;
+    touchStore(courseId);
     delete downloadControls[courseId];
     ui.Row.state(rows(), kind);
     ui.Row.text(rows(), text);
@@ -636,6 +744,8 @@ async function initDownload($course, data, subtitle = false) {
       return !item.lecture.skip;
     });
     total = work.length;
+    store = buildStore(courseId, data.name, dir, data, "downloading", plan.hadManifest);
+    touchStore(courseId);
 
     var skippedNote = data.skipped.length
       ? " · " + data.skipped.length + " " + translate(data.skipped.length == 1 ? "lecture skipped (protected or unavailable)" : "lectures skipped (protected or unavailable)")
@@ -669,14 +779,23 @@ async function initDownload($course, data, subtitle = false) {
       var checked = new Date().toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
       ui.Row.progress(rows(), 1, 1);
       writeManifest(dir, manifest);
+      if (store) store.phase = "done";
       finish("done", translate("Up to date") + " · " + plan.counts.unchanged + " " + translate("lectures unchanged") + skippedNote + " · " + checked);
       return;
     }
 
     for (var item of work) {
       if (cancelled) return;
+      currentItem = item;
+      mark(item.lecture, { state: "downloading", pct: 0 });
       await downloadLecture(item);
       if (cancelled) return;
+      var savedSize = null;
+      try {
+        savedSize = fs.statSync(path.join(dir, item.lecture.primary)).size;
+      } catch (e) {}
+      mark(item.lecture, { state: "done", pct: 100, size: savedSize, speed: 0 });
+      currentItem = null;
       done++;
       view.filePct = 0;
       await saveLecture(item, manifest);
@@ -690,9 +809,12 @@ async function initDownload($course, data, subtitle = false) {
       ? " · " + plan.counts.new + " " + translate("new") + ", " + plan.counts.updated + " " + translate("updated") + ", " + plan.counts.unchanged + " " + translate("unchanged")
       : "";
     ui.Row.progress(rows(), total, total);
+    if (store) store.phase = "done";
     finish("done", translate("Completed") + " · " + when + changes + skippedNote);
   } catch (err) {
     if (cancelled) return;
+    if (currentItem) mark(currentItem.lecture, { state: "failed", reason: errorReason(err.status), speed: 0 });
+    if (store) store.phase = "error";
     if (options.autoRetry && (data.retries || 0) < 5) {
       data.retries = (data.retries || 0) + 1;
       ui.Row.text(rows(), translate("Retrying") + "…");

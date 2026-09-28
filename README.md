@@ -57,6 +57,7 @@ It only works with courses you already have access to. Everything runs on your c
 - See the current lecture, quality, speed and overall progress for every course.
 - Failed downloads state the reason and offer Retry. A dropped connection is retried automatically. Downloads interrupted by closing the app come back with a Resume button.
 - A live badge on the Downloads tab shows what is running, even when you are on another screen.
+- Click a course in Downloads to see **every lecture**, grouped by chapter, with its state: waiting, downloading with live progress, done with file size, unchanged, skipped (protected or unavailable) or failed with the reason. Filter the list, and press **Check for changes** to compare the course with Udemy without downloading anything.
 - Open the finished folder with one click.
 
 **Content**
@@ -160,9 +161,9 @@ If you used Udeler before, CourseGrab keeps your existing settings and login.
    - For **Udemy Business**, switch on Udemy Business first and enter your company name (the part before `.udemy.com`).
 2. **Find a course.** Scroll the list, search by keyword, or paste a course link into the search box. Press `/` to jump to the search box.
 3. **Start the download.** Press **Download** on a course. If the course has subtitles you are asked which language to save.
-4. **Follow the progress.** The Downloads view shows every course. Use **Pause**, **Resume** and **Cancel**, and **Retry** if something fails.
+4. **Follow the progress.** The Downloads view shows every course. Use **Pause**, **Resume** and **Cancel**, and **Retry** if something fails. Click a course (or its details button) to open the full lecture list and see what is being downloaded, what is waiting and what was skipped.
 5. **Open your files.** Press **Open folder** on a finished course.
-6. **Get updates later.** Press **Get updates** on a finished course, or press Download on it again. CourseGrab compares the course with what you saved and downloads only new lectures, replaced videos and anything missing.
+6. **Get updates later.** Press **Get updates** on a finished course, or press Download on it again. CourseGrab compares the course with what you saved and downloads only new lectures, replaced videos and anything missing. To preview the changes first, open the course details and press **Check for changes**, then **Download changes**.
 
 ### Where your files go
 
@@ -314,6 +315,7 @@ index.js                Electron main process (window, menu)
 index.html              App markup: sign in, courses, downloads, settings, about
 assets/js/app.js        Sign in, course list, settings, download controls
 assets/js/engine.js     Download engine: reads a course, finds what changed, saves files
+assets/js/details.js    Course details view: every lecture and its state
 assets/js/ui.js         Views, dialogs, toasts and the course row component
 assets/js/settings.js   Settings stored in the user data folder
 assets/css/app.css      All styles, light and dark themes

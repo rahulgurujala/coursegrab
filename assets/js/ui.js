@@ -44,7 +44,7 @@ const ui = {
     $(".view").removeClass("active");
     $("#view-" + name).addClass("active");
     $(".nav-item").each(function() {
-      const on = $(this).data("view") == name;
+      const on = $(this).data("view") == (name == "course" ? "downloads" : name);
       on
         ? this.setAttribute("aria-current", "page")
         : this.removeAttribute("aria-current");
@@ -98,6 +98,7 @@ const ui = {
     <button class="btn folder-btn" type="button" data-show="done"><svg class="icon"><use href="#i-folder"/></svg>${translate("Open folder")}</button>
     <button class="btn update-btn" type="button" data-show="done" title="${translate("Download only what is new or changed")}"><svg class="icon"><use href="#i-retry"/></svg>${translate("Get updates")}</button>
     <button class="btn primary retry-btn" type="button" data-show="error"><svg class="icon"><use href="#i-retry"/></svg>${translate("Retry")}</button>
+    <button class="btn ghost icon-only details-btn" type="button" data-show="preparing downloading paused interrupted done error" data-only="downloads" title="${translate("Details")}" aria-label="${translate("Details")}"><svg class="icon"><use href="#i-list"/></svg></button>
     <button class="btn ghost icon-only remove-btn" type="button" data-show="idle interrupted done error" data-only="downloads" title="${translate("Remove from list")}" aria-label="${translate("Remove from list")}"><svg class="icon"><use href="#i-trash"/></svg></button>
   </div>
 </li>`;
@@ -114,6 +115,7 @@ const ui = {
   Row: {
     state($c, state) {
       $c.attr("data-state", state);
+      if (typeof courseDetail != "undefined") courseDetail.headerChanged($c.first().attr("course-id"));
       if (state == "preparing") $c.find(".meter").removeAttr("aria-valuenow");
       ui.refreshDownloads();
     },
@@ -204,8 +206,22 @@ $(document).on("click", "[data-goto]", function() {
   ui.showView($(this).data("goto"));
 });
 
+// A click on a course in Downloads (outside its buttons) opens the lecture list.
+$(document).on("click", "#downloads-list .course", function(e) {
+  if ($(e.target).closest("button, a").length) return;
+  courseDetail.open($(this).attr("course-id"));
+});
+
+$(document).on("click", "#downloads-list .details-btn", function() {
+  courseDetail.open($(this).closest(".course").attr("course-id"));
+});
+
 $(document).on("keydown", e => {
   if (document.querySelector("dialog[open]")) return;
+  if (e.key == "Escape" && $("#view-course").hasClass("active")) {
+    ui.showView("downloads");
+    return;
+  }
   if (e.target.matches("input, select, textarea")) {
     if (e.key == "Escape" && e.target.id == "search-input") {
       $("#search-clear").click();

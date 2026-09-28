@@ -38,6 +38,7 @@ COURSEGRAB_USER_DATA=/tmp/coursegrab-dev bun start
 | `index.html` | Static markup for every screen and dialog |
 | `assets/js/app.js` | Sign in, course list, settings, download controls |
 | `assets/js/engine.js` | Download engine: reads a course, plans updates, saves files |
+| `assets/js/details.js` | Course details view: every lecture and its live state |
 | `assets/js/ui.js` | Views, dialogs, toasts and the course row component |
 | `assets/js/settings.js` | Settings file in the user data folder |
 | `assets/css/app.css` | All styles, with light and dark themes |

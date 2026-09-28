@@ -19,7 +19,7 @@ A free, ad-free, cross-platform desktop downloader with no accounts of its own. 
 
 ## Operating Context
 - Sign-in methods: Udemy login window (credentials; the app watches for the access_token cookie) or an access token pasted by the user. Udemy Business users supply a company subdomain.
-- Views: Sign in, Courses (search and list), Downloads (per-course progress with pause, resume, cancel, open folder and retry), Settings and About, plus dialogs for the subtitle language and logout confirmation.
+- Views: Sign in, Courses (search and list), Downloads (per-course progress with pause, resume, cancel, open folder and retry), a course details view (every lecture with its live state, and a dry-run comparison with Udemy), Settings and About, plus dialogs for the subtitle language and logout confirmation.
 - Downloads are long-running; the window may be open for hours. Course lists can be large; search filters them.
 - Some lectures cannot be downloaded (for example DRM protected video). They are skipped and listed, never allowed to block the rest of the course. CourseGrab does not decrypt protected content.
 - Each course folder holds a `.coursegrab.json` record so a later run can detect new, replaced or renamed lectures. Interrupted downloads resume from the data already saved.
