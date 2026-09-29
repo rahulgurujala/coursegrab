@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.2](https://github.com/rahulgurujala/coursegrab/compare/v2.2.1...v2.2.2) (2026-09-29)
+
+
+### Bug Fixes
+
+* content layout was capped at 920px, and download failures hid the real error ([#32](https://github.com/rahulgurujala/coursegrab/issues/32)) ([bc02812](https://github.com/rahulgurujala/coursegrab/commit/bc02812b728b4ee38f077d10fc3e6343b58f9754))
+
 ## [2.2.1](https://github.com/rahulgurujala/coursegrab/compare/v2.2.0...v2.2.1) (2026-09-29)
 
 
