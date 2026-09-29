@@ -38,7 +38,9 @@ export const srcEntries = [
   "src/download/naming.ts",
   "src/download/fsUtils.ts",
   "src/download/planner.ts",
-  "src/download/orchestrator.ts"
+  "src/download/orchestrator.ts",
+  "src/view/esc.ts",
+  "src/view/courseRow.ts"
 ];
 
 export const srcBuildOptions = {

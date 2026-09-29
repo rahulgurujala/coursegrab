@@ -1,12 +1,21 @@
 // UI helpers: translations, views, toasts, dialogs and the course/download row.
 // Rows are driven by a data-state attribute (idle, preparing, downloading,
 // paused, done, error); CSS decides what each state shows.
+//
+// The row template, the Row component, and esc() itself now live in src/view/ (typed, no hidden
+// globals). Row's old inline calls into courseDetail/ui.refreshDownloads/saveDownloads are events
+// there; subscribed to right below, reproducing the exact same behavior in the exact same place.
 
-const esc = s =>
-  String(s == null ? "" : s).replace(
-    /[&<>"']/g,
-    c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
-  );
+const courseRowModule = require("./dist/view/courseRow.js");
+const esc = require("./dist/view/esc.js").esc;
+
+courseRowModule.rowEvents.on("state-changed", function(courseId) {
+  if (typeof courseDetail != "undefined") courseDetail.headerChanged(courseId);
+  ui.refreshDownloads();
+});
+courseRowModule.rowEvents.on("progress", function() {
+  if (!$("#app").prop("hidden")) saveDownloads(false);
+});
 
 const ui = {
   // ---------- i18n ----------
@@ -74,89 +83,14 @@ const ui = {
   },
 
   // ---------- rows ----------
+  // Template, Row component, copyState, formatSpeed, skeleton: src/view/courseRow.ts now.
   courseRow(c, state) {
-    return `
-<li class="course" data-state="${state || "idle"}" course-id="${esc(c.id)}" course-url="${esc(c.url)}">
-  <img class="thumb" src="${esc(c.image)}" alt="" loading="lazy">
-  <div class="course-body">
-    <h3 class="coursename">${esc(c.title)}</h3>
-    <p class="status-line" data-show="idle preparing downloading paused interrupted done error"><span class="status-text"></span></p>
-    <div class="meter" data-show="preparing downloading paused interrupted" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="${esc(c.title)}">
-      <span class="meter-track"><span class="meter-fill"></span></span><span class="meter-pct">0%</span>
-    </div>
-    <p class="now-line" data-show="downloading paused" data-only="downloads"></p>
-  </div>
-  <div class="course-actions">
-    <button class="btn primary download-btn" type="button" data-show="idle">${translate("Download")}</button>
-    <button class="btn primary download-btn" type="button" data-show="interrupted"><svg class="icon flip"><use href="#i-play"/></svg>${translate("Resume")}</button>
-    <button class="btn ghost icon-only open-in-browser" type="button" data-show="idle" data-only="courses" title="${translate("Open on Udemy")}" aria-label="${translate("Open on Udemy")}"><svg class="icon flip"><use href="#i-external"/></svg></button>
-    <button class="btn" type="button" disabled data-show="preparing"><span class="spinner"></span>${translate("Preparing")}</button>
-    <button class="btn" type="button" data-goto="downloads" data-show="downloading paused" data-only="courses">${translate("View progress")}</button>
-    <button class="btn pause-btn" type="button" data-show="downloading" data-only="downloads"><svg class="icon"><use href="#i-pause"/></svg>${translate("Pause")}</button>
-    <button class="btn primary resume-btn" type="button" data-show="paused" data-only="downloads"><svg class="icon flip"><use href="#i-play"/></svg>${translate("Resume")}</button>
-    <button class="btn ghost cancel-btn" type="button" data-show="preparing downloading paused" data-only="downloads">${translate("Cancel")}</button>
-    <button class="btn folder-btn" type="button" data-show="done"><svg class="icon"><use href="#i-folder"/></svg>${translate("Open folder")}</button>
-    <button class="btn update-btn" type="button" data-show="done" title="${translate("Download only what is new or changed")}"><svg class="icon"><use href="#i-retry"/></svg>${translate("Get updates")}</button>
-    <button class="btn primary retry-btn" type="button" data-show="error"><svg class="icon"><use href="#i-retry"/></svg>${translate("Retry")}</button>
-    <button class="btn ghost icon-only details-btn" type="button" data-show="preparing downloading paused interrupted done error" data-only="downloads" title="${translate("Details")}" aria-label="${translate("Details")}"><svg class="icon"><use href="#i-list"/></svg></button>
-    <button class="btn ghost icon-only remove-btn" type="button" data-show="idle interrupted done error" data-only="downloads" title="${translate("Remove from list")}" aria-label="${translate("Remove from list")}"><svg class="icon"><use href="#i-trash"/></svg></button>
-  </div>
-</li>`;
+    return courseRowModule.courseRowHtml(c, state, translate);
   },
-
-  skeleton(n) {
-    return Array(n)
-      .fill('<li class="skeleton" aria-hidden="true"><i></i><i></i><i></i></li>')
-      .join("");
-  },
-
-  // All rows of one course (Courses list copy and Downloads list copy) are
-  // updated together, so a Row call takes the whole jQuery set.
-  Row: {
-    state($c, state) {
-      $c.attr("data-state", state);
-      if (typeof courseDetail != "undefined") courseDetail.headerChanged($c.first().attr("course-id"));
-      if (state == "preparing") $c.find(".meter").removeAttr("aria-valuenow");
-      ui.refreshDownloads();
-    },
-    text($c, text) {
-      $c.find(".status-text").text(text || "");
-      $c.find(".meter").attr("aria-valuetext", text || "");
-    },
-    now($c, text) {
-      $c.find(".now-line").text(text || "");
-    },
-    progress($c, done, total) {
-      const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
-      $c.attr("data-pct", pct);
-      $c.find(".meter-fill").css("--p", pct / 100);
-      $c.find(".meter-pct").text(pct + "%");
-      $c.find(".meter").attr("aria-valuenow", pct);
-      // save the list now and then while downloading, so a crash keeps an accurate percentage
-      if (Date.now() - (ui.lastSave || 0) > 5000 && !$("#app").prop("hidden")) {
-        ui.lastSave = Date.now();
-        saveDownloads(false);
-      }
-    }
-  },
-
-  // Copy a running download's visible state onto a freshly built row of the same course.
-  copyState($from, $to) {
-    $to.attr({
-      "data-state": $from.attr("data-state"),
-      "data-pct": $from.attr("data-pct"),
-      "data-path": $from.attr("data-path") || ""
-    });
-    ui.Row.text($to, $from.find(".status-text").text());
-    ui.Row.now($to, $from.find(".now-line").text());
-    ui.Row.progress($to, +$from.attr("data-pct") || 0, 100);
-  },
-
-  formatSpeed(kbps) {
-    return kbps >= 1024
-      ? (kbps / 1024).toFixed(1) + " MB/s"
-      : kbps + " KB/s";
-  },
+  skeleton: courseRowModule.skeletonHtml,
+  Row: courseRowModule.Row,
+  copyState: courseRowModule.copyState,
+  formatSpeed: courseRowModule.formatSpeed,
 
   // Badge, summary line, empty state and "clear finished" for the Downloads view.
   refreshDownloads() {
