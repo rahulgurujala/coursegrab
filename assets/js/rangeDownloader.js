@@ -273,6 +273,11 @@ class Download extends EventEmitter {
     if (this._aborted) return; // an intentional stop()/pause(), not a failure
     this.status = -1;
     this.error = err;
+    // always surface the real underlying reason (HTTP status, or the OS/Node error code and
+    // message, e.g. ECONNRESET, ENOTFOUND, a TLS error) rather than letting it get collapsed
+    // into a generic "connection" label upstream: that generic label is a summary for the UI
+    // pill, not a diagnosis, and this is the one place that still has the real error object
+    this.emit("log", { level: "error", text: "failed: " + (err && (err.status ? "HTTP " + err.status : err.code ? err.code + " (" + err.message + ")" : err.message || String(err))) });
     this.emit("error", this);
   }
 

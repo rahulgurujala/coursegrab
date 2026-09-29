@@ -655,7 +655,7 @@ function retryOneFile(url, dest, onProgress, courseId, label) {
         onProgress(Math.round(stats.total.completed) || 0);
       });
       dl.on("log", function(e) {
-        if (courseId) devlog[e.level == "warn" ? "warn" : "info"](courseId, (label ? label + ": " : "") + e.text);
+        if (courseId) devlog[e.level == "error" ? "error" : e.level == "warn" ? "warn" : "info"](courseId, (label ? label + ": " : "") + e.text);
       });
       dl.on("end", function() {
         if (courseId) devlog.info(courseId, (label ? label + ": " : "") + "done");
@@ -844,7 +844,7 @@ async function initDownload($course, data, subtitle = false) {
         paint();
       });
       dl.on("log", function(e) {
-        devlog[e.level == "warn" ? "warn" : "info"](courseId, view.name + ": " + e.text);
+        devlog[e.level == "error" ? "error" : e.level == "warn" ? "warn" : "info"](courseId, view.name + ": " + e.text);
       });
       dl.on("end", function() {
         settle();
