@@ -41,7 +41,8 @@ export const srcEntries = [
   "src/shared/devlog.ts",
   "src/view/esc.ts",
   "src/view/courseRow.ts",
-  "src/view/courseDetails.ts"
+  "src/view/courseDetails.ts",
+  "src/view/shell.ts"
 ];
 
 export const srcBuildOptions = {
