@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/rahulgurujala/coursegrab/compare/v2.2.0...v2.2.1) (2026-09-29)
+
+
+### Bug Fixes
+
+* replace the download library, add a debug console and always-on Open folder ([#29](https://github.com/rahulgurujala/coursegrab/issues/29)) ([cbfe367](https://github.com/rahulgurujala/coursegrab/commit/cbfe3678acf426e2521db09ce658dda6cf32d8d1))
+
 ## [2.2.0](https://github.com/rahulgurujala/coursegrab/compare/v2.1.1...v2.2.0) (2026-09-29)
 
 
