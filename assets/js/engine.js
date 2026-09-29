@@ -3,8 +3,9 @@
 //
 // Loaded after app.js, which provides: $, ui, settings, translate, subDomain,
 // fs, homedir, sanitize, vtt2srt, https, Downloader, downloadControls, ensureDownloadRow.
-// Udemy API calls live in src/api/udemy.ts, course state in src/store/*.ts (both compiled to
-// dist/ and required below, the same way assets/js/rangeDownloader.js already is).
+// Udemy API calls live in src/api/udemy.ts, course state in src/store/*.ts, both compiled to
+// dist/ and required below (the actual downloader, src/download/rangeDownloader.ts, is required
+// by app.js instead, since Downloader is one of the globals this file is handed above).
 
 const path = require("path");
 const udemyApi = require("./dist/api/udemy.js");
@@ -53,8 +54,8 @@ async function checkCourse(course, onProgress) {
 
 // ---------- helpers ----------
 // Every actual Udemy request lives in src/api/udemy.ts (typed, no side effects beyond the
-// network call itself), compiled to dist/api/udemy.js and require()'d the same way
-// assets/js/rangeDownloader.js already is. This just supplies the auth/logging context it needs.
+// network call itself), compiled to dist/api/udemy.js and required below. This just supplies
+// the auth/logging context it needs.
 function apiContext() {
   return {
     subDomain: subDomain,
@@ -564,7 +565,7 @@ async function retryLecture(courseId, lectureId) {
 }
 
 // A small retrying single-file downloader, for retryLecture (no pause/resume, just retry on drop).
-// rangeDownloader.js (see its own header comment) owns retrying each byte range internally and
+// rangeDownloader.ts (see its own header comment) owns retrying each byte range internally and
 // only reports "end" once the file is actually, fully renamed to its final name, so there is no
 // separate stall watchdog here racing against it: what the promise settles with is always what is
 // really on disk.
@@ -731,7 +732,7 @@ async function initDownload($course, data, subtitle = false) {
   }
 
   // Downloads one file. Partly downloaded files continue where they stopped and complete files are kept.
-  // rangeDownloader.js (see its header comment) retries each byte range on its own and only ever
+  // rangeDownloader.ts (see its header comment) retries each byte range on its own and only ever
   // reports "end" once the file has actually been renamed to its final, complete name, so there is
   // no separate watchdog here racing its own stop() against the download finishing anyway: what
   // this promise settles with always matches what is really on disk.

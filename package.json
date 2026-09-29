@@ -32,8 +32,7 @@
     "files": [
       "index.html",
       "index.js",
-      "dist/renderer/**/*",
-      "dist/api/**/*",
+      "dist/**/*",
       "assets/**/*",
       "!assets/js/ui.js",
       "!assets/js/devlog.js",
