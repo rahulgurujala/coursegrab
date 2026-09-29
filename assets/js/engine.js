@@ -11,6 +11,9 @@ const path = require("path");
 const udemyApi = require("./dist/api/udemy.js");
 const manifestStore = require("./dist/store/manifest.js");
 const courseStoreModule = require("./dist/store/courseStore.js");
+const naming = require("./dist/download/naming.js");
+const fsUtils = require("./dist/download/fsUtils.js");
+const planner = require("./dist/download/planner.js");
 
 const SKIPPED_FILE = "Skipped lectures.txt";
 
@@ -21,6 +24,13 @@ var courseStore = courseStoreModule.courseStore;
 var readManifest = manifestStore.readManifest;
 var writeManifest = manifestStore.writeManifest;
 var buildStore = courseStoreModule.buildStore;
+var capName = naming.capName;
+var chapterFolder = naming.chapterFolder;
+var primaryName = naming.primaryName;
+var guessExtension = naming.guessExtension;
+var attachmentName = naming.attachmentName;
+var removeQuietly = fsUtils.removeQuietly;
+var planUpdates = planner.planUpdates;
 
 function storeFromManifest(courseId, title, dir) {
   return courseStoreModule.storeFromManifest(courseId, title, dir, translate);
@@ -88,51 +98,6 @@ function downloadRoot() {
 
 function courseDir(title) {
   return path.join(downloadRoot(), sanitize(title));
-}
-
-// A single path segment must stay well under the filesystem's NAME_MAX (255 bytes on every
-// platform this app targets). This is also the backstop against a malformed URL ever producing
-// a name the OS refuses to open (see guessExtension's comment for a real case of exactly that).
-function capName(name, maxLen) {
-  maxLen = maxLen || 150;
-  if (name.length <= maxLen) return name;
-  var dot = name.lastIndexOf(".");
-  var ext = dot > -1 && name.length - dot <= 12 ? name.slice(dot) : "";
-  return name.slice(0, maxLen - ext.length) + ext;
-}
-
-function chapterFolder(chapterIndex, chapter) {
-  return capName(sanitize(chapterIndex + 1 + ". " + chapter.name));
-}
-
-// Same file names as earlier versions, so folders from older downloads are recognised.
-function primaryName(lectureIndex, lecture) {
-  var base = lectureIndex + 1 + ". " + lecture.name.trim();
-  if (lecture.type == "Article" || lecture.type == "Url") {
-    return capName(sanitize(base + ".html"));
-  }
-  return capName(sanitize(base + "." + (lecture.type == "File" ? "pdf" : "mp4")));
-}
-
-// Best-effort file extension from a download URL. Some of Udemy's supplementary-asset URLs are
-// missing the "?" that should separate the path from the query string: a real failure had
-// "Expires=...&Signature=..." glued directly onto the filename with no "?" at all, which broke
-// the previous "everything after the last dot" guess and produced an ENAMETOOLONG-length name.
-// Split on either separator, and only trust a result that actually looks like an extension.
-function guessExtension(url) {
-  var path = (url || "").split(/[?&]/)[0];
-  var last = path.split("/").pop() || "";
-  var dot = last.lastIndexOf(".");
-  var ext = dot == -1 ? "" : last.slice(dot + 1);
-  return /^[A-Za-z0-9]{1,8}$/.test(ext) ? ext : "";
-}
-
-function removeQuietly() {
-  for (var i = 0; i < arguments.length; i++) {
-    try {
-      fs.unlinkSync(arguments[i]);
-    } catch (e) {}
-  }
 }
 
 function httpError(status) {
@@ -322,81 +287,6 @@ async function prepareCourse(course, prep, onProgress, retryOnly) {
   return data;
 }
 
-// ---------- what needs downloading ----------
-// Compares the course with the manifest saved in its folder by an earlier download.
-function planUpdates(data, dir, options, inScope, dryRun) {
-  var manifest = readManifest(dir);
-  var known = manifest ? manifest.lectures : {};
-  var counts = { new: 0, updated: 0, missing: 0, unchanged: 0 };
-  var seen = {};
-
-  data.chapters.forEach(function(chapter, ci) {
-    chapter.lectures.forEach(function(lecture, li) {
-      if (lecture.type == "Skipped") return;
-      var entry = known[lecture.id];
-      var primary = path.join(chapterFolder(ci, chapter), primaryName(li, lecture));
-      var target = path.join(dir, primary);
-      seen[lecture.id] = true;
-      lecture.primary = primary;
-      if (!inScope[lecture.id]) {
-        // outside the chosen lecture range: leave files and records alone
-        lecture.status = "outside";
-        lecture.skip = true;
-        return;
-      }
-
-      if (lecture._trusted) {
-        // retrying the course: already downloaded successfully before, take it as is without
-        // re-checking Udemy for this lecture (that is what Get updates is for)
-        lecture.status = "unchanged";
-        lecture.skip = true;
-        counts.unchanged++;
-        return;
-      }
-
-      if (!entry) {
-        lecture.status = "new";
-      } else if (
-        (entry.assetId != null && lecture.assetId != null && entry.assetId != lecture.assetId) ||
-        (entry.created && lecture.assetCreated && entry.created != lecture.assetCreated)
-      ) {
-        // the instructor replaced this video: fetch the new one
-        lecture.status = "updated";
-        var old = path.join(dir, entry.primary || primary);
-        if (!dryRun) removeQuietly(old, old + ".mtd", old + ".mtd.meta.json", old.replace(/\.[^.]+$/, ".srt"), target, target + ".mtd", target + ".mtd.meta.json");
-      } else {
-        // same content; follow a rename or reorder by moving the file instead of downloading again
-        var oldPath = entry.primary ? path.join(dir, entry.primary) : target;
-        var moved = oldPath != target && fs.existsSync(oldPath) && !fs.existsSync(target);
-        if (moved && !dryRun) {
-          try {
-            fs.mkdirSync(path.dirname(target), { recursive: true });
-            fs.renameSync(oldPath, target);
-            var oldSub = oldPath.replace(/\.[^.]+$/, ".srt");
-            if (fs.existsSync(oldSub)) fs.renameSync(oldSub, target.replace(/\.[^.]+$/, ".srt"));
-          } catch (e) {}
-        }
-        var wantsSubs = !options.skipSubtitles && !!lecture.caption;
-        var wantsFiles = !options.skipAttachments && !!(lecture.supplementary && lecture.supplementary.length);
-        var complete =
-          (fs.existsSync(target) || (dryRun && moved)) &&
-          !fs.existsSync(target + ".mtd") &&
-          entry.done !== false &&
-          (!wantsSubs || entry.subs) &&
-          (!wantsFiles || entry.attach);
-        lecture.status = complete ? "unchanged" : "missing";
-      }
-      counts[lecture.status]++;
-      lecture.skip = lecture.status == "unchanged";
-    });
-  });
-
-  var removed = Object.keys(known).filter(function(id) {
-    return !seen[id];
-  }).length;
-  return { manifest: manifest, counts: counts, removed: removed, hadManifest: !!manifest };
-}
-
 // ---------- running a download ----------
 function fetchSubtitle(url, dir, lectureIndex, lecture) {
   var vttName = sanitize(lectureIndex + 1 + ". " + lecture.name.trim() + ".vtt");
@@ -420,14 +310,6 @@ function fetchSubtitle(url, dir, lectureIndex, lecture) {
     .then(function() {
       removeQuietly(vtt);
     });
-}
-
-function attachmentName(lectureIndex, index, asset) {
-  var base = lectureIndex + 1 + "." + (index + 1) + " " + asset.name.trim();
-  if (asset.type == "Url" || asset.type == "Article") return capName(sanitize(base + ".html"));
-  var nameExt = asset.name.indexOf(".") > -1 ? asset.name.split(".").pop() : "";
-  var ext = guessExtension(asset.src) || nameExt || "bin";
-  return capName(sanitize(base + (nameExt == ext ? "" : "." + ext)));
 }
 
 // Downloads exactly one lecture, independent of any running course-level download.

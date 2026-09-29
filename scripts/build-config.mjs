@@ -30,7 +30,15 @@ export const buildOptions = {
 // renderer files, the same way assets/js/rangeDownloader.js already is, until those files
 // themselves move into src/ later in the rewrite. outbase mirrors src/'s own structure under
 // dist/ (src/api/udemy.ts -> dist/api/udemy.js), matching the target layout in the rewrite plan.
-export const srcEntries = ["src/api/udemy.ts", "src/store/manifest.ts", "src/store/courseStore.ts", "src/download/rangeDownloader.ts"];
+export const srcEntries = [
+  "src/api/udemy.ts",
+  "src/store/manifest.ts",
+  "src/store/courseStore.ts",
+  "src/download/rangeDownloader.ts",
+  "src/download/naming.ts",
+  "src/download/fsUtils.ts",
+  "src/download/planner.ts"
+];
 
 export const srcBuildOptions = {
   entryPoints: srcEntries,
