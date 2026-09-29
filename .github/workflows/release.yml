@@ -53,12 +53,13 @@ jobs:
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
+      - run: bun run build:renderer
       - run: bunx electron-builder ${{ matrix.args }} --publish never
       - name: Attach installers to the release
         shell: bash
         run: |
           # the .yml/.blockmap files are electron-updater's update feed (Windows and Linux read
-          # them to find and verify the next version); macOS has no update feed, see index.js
+          # them to find and verify the next version); macOS has no update feed, see src/main/updater.ts
           find dist -maxdepth 1 -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.AppImage' \
             -o -name '*.yml' -o -name '*.blockmap' \) -print0 \
             | xargs -0 gh release upload "${{ needs.release-please.outputs.tag_name }}" --clobber

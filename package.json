@@ -11,14 +11,18 @@
     "url": "https://github.com/rahulgurujala/coursegrab/issues"
   },
   "description": "A cross platform (Windows, Mac, Linux) desktop application for downloading your enrolled Udemy courses. Based on Udeler.",
+  "main": "dist/main/index.js",
   "scripts": {
-    "start": "electron .",
+    "start": "node scripts/dev.mjs",
     "postinstall": "electron-builder install-app-deps",
-    "build": "electron-builder -wml",
-    "build-win": "electron-builder -w",
-    "build-mac": "electron-builder -m",
-    "build-linux": "electron-builder -l",
-    "dist": "build"
+    "build:renderer": "node scripts/build.mjs",
+    "build": "bun run build:renderer && electron-builder -wml",
+    "build-win": "bun run build:renderer && electron-builder -w",
+    "build-mac": "bun run build:renderer && electron-builder -m",
+    "build-linux": "bun run build:renderer && electron-builder -l",
+    "dist": "bun run build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "build": {
     "appId": "com.rahulgurujala.coursegrab",
@@ -28,8 +32,12 @@
     },
     "files": [
       "index.html",
-      "index.js",
+      "dist/**/*",
       "assets/**/*",
+      "!assets/js/ui.js",
+      "!assets/js/engine.js",
+      "!assets/js/details.js",
+      "!assets/js/updater.js",
       "locale/**/*"
     ],
     "mac": {
@@ -50,8 +58,13 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "@types/jquery": "4.0.1",
+    "@types/node": "26.6.3",
     "electron": "^44.4.5",
-    "electron-builder": "^26.15.3"
+    "electron-builder": "^26.15.3",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2",
+    "vitest": "5.0.2"
   },
   "dependencies": {
     "@electron/remote": "^2.1.3",
