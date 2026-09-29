@@ -38,6 +38,8 @@ COURSEGRAB_USER_DATA=/tmp/coursegrab-dev bun start
 | `index.html` | Static markup for every screen and dialog |
 | `assets/js/app.js` | Sign in, course list, settings, download controls |
 | `assets/js/engine.js` | Download engine: reads a course, plans updates, saves files |
+| `assets/js/rangeDownloader.js` | Multi-connection HTTP downloader used by the engine |
+| `assets/js/devlog.js` | Ring buffer behind the course details debug console |
 | `assets/js/details.js` | Course details view: every lecture and its live state |
 | `assets/js/updater.js` | Update checking and the update banner |
 | `assets/js/ui.js` | Views, dialogs, toasts and the course row component |
