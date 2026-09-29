@@ -39,10 +39,19 @@ function partialPaths(dest) {
 
 const MAX_REDIRECTS = 5;
 
+// Some of Udemy's asset URLs come back protocol-relative ("//cdn.../file") or without a scheme
+// at all: new URL() throws ERR_INVALID_URL on those with no base to resolve against. Normalize
+// before parsing (seen directly: a real "Invalid URL" failure on a video lecture).
+function normalizeUrl(u) {
+  if (u.indexOf("//") === 0) return "https:" + u;
+  if (!/^https?:\/\//i.test(u)) return "https://" + u;
+  return u;
+}
+
 function request(url, options) {
   return new Promise(function(resolve, reject) {
     function go(u, hops) {
-      var parsed = new URL(u);
+      var parsed = new URL(normalizeUrl(u));
       var lib = parsed.protocol == "http:" ? http : https;
       var req = lib.request(parsed, options, function(res) {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
@@ -51,7 +60,7 @@ function request(url, options) {
             reject(Object.assign(new Error("Too many redirects"), { status: 0 }));
             return;
           }
-          go(new URL(res.headers.location, u).href, hops + 1);
+          go(new URL(res.headers.location, parsed).href, hops + 1);
           return;
         }
         resolve({ res: res, req: req });
