@@ -185,5 +185,13 @@
   "to download": "",
   "waiting": "",
   "Retry this lecture": "",
-  "That lecture could not be downloaded. Check your connection and try again.": ""
+  "That lecture could not be downloaded. Check your connection and try again.": "",
+  "Could not update": "",
+  "Dismiss": "",
+  "Downloading update": "",
+  "Restart & update": "",
+  "Restart to finish installing it.": "",
+  "Update": "",
+  "Update available": "",
+  "Update ready": ""
 }

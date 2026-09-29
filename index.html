@@ -32,6 +32,7 @@
       <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" /></symbol>
       <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11" /><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" /></symbol>
       <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16" /><path d="M9 7V4h6v3" /><path d="M6 7l1 13h10l1-13" /></symbol>
+      <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" /><path d="M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8" /><path d="M12 8v13" /><path d="M12 8c-1.5-4-6-4-6-1.5S9 8 12 8z" /><path d="M12 8c1.5-4 6-4 6-1.5S15 8 12 8z" /></symbol>
     </svg>
 
     <!-- Sign in -->
@@ -365,6 +366,19 @@
 
     <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 
+    <div class="update-banner" id="update-banner" role="status" aria-live="polite" hidden>
+      <svg class="icon"><use href="#i-gift" /></svg>
+      <div class="grow">
+        <div class="ub-title" id="update-title"></div>
+        <div class="ub-sub" id="update-sub"></div>
+        <div class="ub-progress" id="update-progress-track" hidden><span class="ub-fill" id="update-progress-fill"></span></div>
+      </div>
+      <div class="ub-actions" id="update-actions"></div>
+      <button class="btn ghost icon-only" id="update-dismiss" type="button" title="Dismiss" aria-label="Dismiss" data-i18n-aria="Dismiss">
+        <svg class="icon"><use href="#i-x" /></svg>
+      </button>
+    </div>
+
     <script>
       const $ = (jQuery = require("jquery"));
       const settings = require("./assets/js/settings");
@@ -385,5 +399,6 @@
     <script src="assets/js/app.js"></script>
     <script src="assets/js/engine.js"></script>
     <script src="assets/js/details.js"></script>
+    <script src="assets/js/updater.js"></script>
   </body>
 </html>
