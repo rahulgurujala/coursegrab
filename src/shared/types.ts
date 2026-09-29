@@ -28,12 +28,26 @@ export interface GeneralSettings {
 
 export type Subdomain = string; // "www" or a Udemy Business org subdomain
 
+// A snapshot of one Downloads-list row, persisted so the list survives an app restart (saveDownloads/
+// loadDownloads in app.js). Caught while porting app.js to TypeScript: this was wrongly typed as
+// Record<string, boolean> since phase 2; it is actually an array of these.
+export interface DownloadedCourseRecord {
+  id: string;
+  url: string;
+  title: string;
+  image?: string;
+  state: string;
+  pct: number;
+  text: string;
+  path: string;
+}
+
 export interface SettingsData {
   access_token?: string;
   subdomain?: Subdomain;
   general?: GeneralSettings;
   download?: DownloadSettings;
-  downloadedCourses?: Record<string, boolean>;
+  downloadedCourses?: DownloadedCourseRecord[];
 }
 
 // The drop-in replacement for electron-settings v3 (assets/js/settings.js): dot-path get/set
@@ -52,6 +66,22 @@ export interface CourseSummary {
   title: string;
   url: string;
   image?: string;
+}
+
+// What Udemy's /subscribed-courses list/search endpoint actually returns per course: a
+// different shape than CourseSummary (image_240x135, not image), which is this app's own
+// rendering-oriented shape once a course has been turned into a row.
+export interface UdemyCourseListItem {
+  id: string | number;
+  title: string;
+  url: string;
+  image_240x135?: string;
+}
+
+export interface UdemyCourseListResponse {
+  count: number;
+  next: string | null;
+  results: UdemyCourseListItem[];
 }
 
 // ---------- curriculum / lectures ----------

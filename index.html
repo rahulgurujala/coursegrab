@@ -407,9 +407,29 @@
           return text;
         }
       }
+      // Shared Node/npm requires several later scripts still use as plain globals (engine.js in
+      // particular: retryLecture/retryOneFile/downloadRoot/etc. are not ported yet). Used to live
+      // as top-level `var`s in app.js, which worked only because app.js was itself a classic
+      // script; moved here once app.js became a real ES module (app.ts) and stopped being able to
+      // leak globals to its siblings the same way.
+      const fs = require("fs");
+      const homedir = require("os").homedir();
+      const sanitize = require("sanitize-filename");
+      const vtt2srt = require("node-vtt-to-srt");
+      const https = require("https");
+      const Downloader = require("./dist/download/rangeDownloader.js").Downloader;
     </script>
     <script src="dist/renderer/ui.js"></script>
-    <script src="dist/renderer/app.js"></script>
+    <script>
+      // dist/app.js is not loaded as <script src>, unlike its siblings here: it is the one
+      // srcEntries module that is also a script-tag entry point. A <script src> tag's require()
+      // calls resolve relative to this page (see the fs/homedir comment above), but esbuild wrote
+      // app.ts's internal requires (e.g. require("./shared/downloadControls")) relative to
+      // app.ts's own location, exactly like every other src/ module. Requiring it here instead
+      // gives it standard per-file Node resolution, the same as when ui.js requires
+      // dist/view/courseRow.js. Same position in load order, so ui must finish first still holds.
+      require("./dist/app.js");
+    </script>
     <script src="dist/renderer/engine.js"></script>
     <script src="dist/renderer/details.js"></script>
     <script src="dist/renderer/updater.js"></script>

@@ -128,3 +128,13 @@ export function copyState($from: JQuery, $to: JQuery): void {
   Row.now($to, $from.find(".now-line").text());
   Row.progress($to, parseInt($from.attr("data-pct") || "0", 10) || 0, 100);
 }
+
+// The Downloads list always holds a row for a course that is preparing or downloading. Row-shaped
+// DOM setup, so it lives here rather than in app.ts/engine.js (both of which call it: app.ts when
+// a download button is clicked, engine.js's initDownload when a course-level Retry resumes one).
+export function ensureDownloadRow($course: JQuery): void {
+  const id = $course.attr("course-id");
+  if (!$('#downloads-list .course[course-id="' + id + '"]').length) {
+    $("#downloads-list").prepend($course.clone());
+  }
+}

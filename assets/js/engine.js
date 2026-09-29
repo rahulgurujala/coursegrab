@@ -1,11 +1,13 @@
 // Course download engine: reads a course from Udemy, decides what needs downloading
 // (new, updated or missing lectures only) and saves it to disk.
 //
-// Loaded after app.js, which provides: $, ui, settings, translate, subDomain,
-// fs, homedir, sanitize, vtt2srt, https, Downloader, downloadControls, ensureDownloadRow.
+// Loaded after the inline bootstrap script in index.html, which provides: $, settings, translate,
+// fs, homedir, sanitize, vtt2srt, https, Downloader. ui comes from ui.js.
 // Udemy API calls live in src/api/udemy.ts, course state in src/store/*.ts, both compiled to
-// dist/ and required below (the actual downloader, src/download/rangeDownloader.ts, is required
-// by app.js instead, since Downloader is one of the globals this file is handed above).
+// dist/ and required below, the same as downloadControls/session/ensureDownloadRow: these used to
+// be plain globals app.js provided as a classic script; app.js is now app.ts, a real module that
+// cannot leak globals to its siblings the same way, so anything it used to hand engine.js this
+// way is now an explicit require of the same real module app.ts itself imports.
 
 const path = require("path");
 const udemyApi = require("./dist/api/udemy.js");
@@ -16,6 +18,9 @@ const fsUtils = require("./dist/download/fsUtils.js");
 const planner = require("./dist/download/planner.js");
 const orchestratorModule = require("./dist/download/orchestrator.js");
 const devlogModule = require("./dist/shared/devlog.js");
+const downloadControls = require("./dist/shared/downloadControls.js").downloadControls;
+const session = require("./dist/shared/session.js").session;
+const ensureDownloadRow = require("./dist/view/courseRow.js").ensureDownloadRow;
 
 const SKIPPED_FILE = "Skipped lectures.txt";
 
@@ -75,7 +80,7 @@ async function checkCourse(course, onProgress) {
 // the auth/logging context it needs.
 function apiContext() {
   return {
-    subDomain: subDomain,
+    subDomain: session.subDomain,
     accessToken: settings.get("access_token"),
     onLog: function(courseId, level, text) {
       devlog[level](courseId, text);
@@ -255,7 +260,7 @@ async function prepareCourse(course, prep, onProgress, retryOnly) {
         name: v.title,
         type: "Url",
         quality: "Attachment",
-        src: `<script type="text/javascript">window.location = "https://${subDomain}.udemy.com${course.url}t/${v._class}/${v.id}";</script>`
+        src: `<script type="text/javascript">window.location = "https://${session.subDomain}.udemy.com${course.url}t/${v._class}/${v.id}";</script>`
       });
     }
   });
