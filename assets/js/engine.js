@@ -620,11 +620,20 @@ function retryOneFile(url, dest, onProgress) {
   function attempt() {
     return new Promise(function(resolve, reject) {
       var dl = fs.existsSync(dest + ".mtd") ? downloader.resumeDownload(dest) : downloader.download(url, dest);
-      // retries happen one layer up (fetchFileWithRetry / the loop below), not here too:
-      // stacking both was why a dead lecture used to take minutes to finally fail.
-      dl.setRetryOptions({ maxRetries: 0 });
+      // status 2 ("error, retrying") is the library resuming just the one thread that hiccupped,
+      // not a restart of the whole file: with 5 parallel connections on a large lecture, one of
+      // them dropping briefly is normal. Setting this to 0 (as an earlier version of this file
+      // did) disabled that per-thread recovery, so any single-thread hiccup hard-failed the whole
+      // file and our own outer retry restarted it from scratch, i.e. exactly "100% then back to 0%
+      // then failed". A short retry interval keeps a truly dead connection from stalling long, the
+      // stall watchdog below is the backstop for that.
+      dl.setRetryOptions({ maxRetries: 2, retryInterval: 1500 });
       dl.setOptions({ threadsCount: 5 });
       var notStarted = 0;
+      // give up only on no byte progress for a while, not a fixed clock: see the comment on the
+      // same watchdog in fetchFile, a large lecture can legitimately still be transferring
+      var lastBytes = 0;
+      var stalledSince = Date.now();
       var timer = setInterval(function() {
         if (dl.status == 0) {
           // give up instead of polling forever if it never starts downloading at all
@@ -633,7 +642,19 @@ function retryOneFile(url, dest, onProgress) {
           return;
         }
         if (dl.status == 1 || dl.status == -1) {
-          onProgress(Math.round(dl.getStats().total.completed) || 0);
+          var stats = dl.getStats();
+          var bytes = stats.total.downloaded || 0;
+          if (bytes > lastBytes) {
+            lastBytes = bytes;
+            stalledSince = Date.now();
+          } else if (dl.status == 1 && Date.now() - stalledSince > 20000) {
+            try {
+              dl.stop();
+            } catch (e) {}
+            settle(httpError(0));
+            return;
+          }
+          onProgress(Math.round(stats.total.completed) || 0);
         }
         if (dl.status == -1) {
           clearInterval(timer);
@@ -659,16 +680,8 @@ function retryOneFile(url, dest, onProgress) {
         if (settled) return;
         settled = true;
         clearInterval(timer);
-        clearTimeout(hardCeiling);
         err ? reject(err) : resolve();
       }
-      // same hard ceiling as the main downloader, see the comment there
-      var hardCeiling = setTimeout(function() {
-        try {
-          dl.stop();
-        } catch (e) {}
-        settle(httpError(0));
-      }, 20000);
       dl.on("error", function() {});
       dl.on("end", function() {
         settle();
@@ -681,7 +694,7 @@ function retryOneFile(url, dest, onProgress) {
       try {
         return await attempt();
       } catch (e) {
-        if (i >= 3) throw e;
+        if (i >= 2) throw e;
         await new Promise(function(r) {
           setTimeout(r, 1500 * i);
         });
@@ -832,7 +845,6 @@ async function initDownload($course, data, subtitle = false) {
         if (settled) return;
         settled = true;
         clearInterval(timer);
-        clearTimeout(hardCeiling);
         canPause = false;
         current = null;
         err ? reject(err) : resolve();
@@ -840,18 +852,20 @@ async function initDownload($course, data, subtitle = false) {
       current = { dl: dl, abort: function() { settle(new Error("cancelled")); } };
       // Some connection failures make the library retry forever internally, cycling through its own
       // states without ever reaching a terminal one (observed directly against a dropped connection).
-      // A hard ceiling per attempt guarantees this always ends, so one bad lecture cannot stall the
-      // course indefinitely; the outer retry loop still gets a few attempts at a fresh connection.
-      var hardCeiling = setTimeout(function() {
-        try {
-          dl.stop();
-        } catch (e) {}
-        settle(httpError(0));
-      }, 20000);
+      // Give up only when there has been no byte progress for a while, not on a fixed clock: a large
+      // lecture (real ones run to several hundred MB) can legitimately still be transferring well past
+      // any fixed ceiling, and a first version of this watchdog wrongly killed those.
+      var lastBytes = 0;
+      var stalledSince = Date.now();
 
-      // retries happen one layer up (fetchFileWithRetry / the loop below), not here too:
-      // stacking both was why a dead lecture used to take minutes to finally fail.
-      dl.setRetryOptions({ maxRetries: 0 });
+      // status 2 ("error, retrying") is the library resuming just the one thread that hiccupped,
+      // not a restart of the whole file: with 5 parallel connections on a large lecture, one of
+      // them dropping briefly is normal. Setting this to 0 (as an earlier version of this file
+      // did) disabled that per-thread recovery, so any single-thread hiccup hard-failed the whole
+      // file and our own outer retry restarted it from scratch, i.e. exactly "100% then back to 0%
+      // then failed". A short retry interval keeps a truly dead connection from stalling long, the
+      // stall watchdog below is the backstop for that.
+      dl.setRetryOptions({ maxRetries: 2, retryInterval: 1500 });
       dl.setOptions({ threadsCount: 5 });
       dl.on("error", function() {
         // handled through the status checks below
@@ -888,6 +902,17 @@ async function initDownload($course, data, subtitle = false) {
             break;
           case 1:
             var running = dl.getStats();
+            var runningBytes = running.total.downloaded || 0;
+            if (runningBytes > lastBytes) {
+              lastBytes = runningBytes;
+              stalledSince = Date.now();
+            } else if (Date.now() - stalledSince > 20000) {
+              try {
+                dl.stop();
+              } catch (e) {}
+              settle(httpError(0));
+              break;
+            }
             view.speed = parseInt(running.present.speed / 1000) || 0;
             view.filePct = Math.round(running.total.completed) || 0;
             paint();
@@ -931,7 +956,7 @@ async function initDownload($course, data, subtitle = false) {
         return await fetchFile(url, dest);
       } catch (err) {
         var denied = err.status == 401 || err.status == 403;
-        if (cancelled || denied || attempt >= 3) throw err;
+        if (cancelled || denied || attempt >= 2) throw err;
         ui.Row.text(rows(), translate("Connection lost, trying again") + "…");
         await new Promise(function(resolve) {
           setTimeout(resolve, 1500 * attempt);
