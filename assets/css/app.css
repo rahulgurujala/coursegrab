@@ -7,10 +7,9 @@
 :root {
   color-scheme: light dark;
 
-  /* content column width: generous enough to actually use a wide/fullscreen window instead of
-     leaving most of it empty, but still capped so a lecture row's text doesn't stretch edge to
-     edge on an ultrawide monitor */
-  --content-max: 1440px;
+  /* content column width: fills the window (minus the side padding) rather than stopping at a
+     fixed cap, so a wide or fullscreen window is actually used instead of showing empty space */
+  --content-max: 100%;
   --sidebar-w: 220px;
 
   --accent: #2f5bea;
