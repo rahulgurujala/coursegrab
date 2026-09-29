@@ -54,6 +54,7 @@ It only works with courses you already have access to. Everything runs on your c
 - Download several courses at the same time.
 - Pause, resume and cancel from the Downloads view. Partly downloaded files continue where they stopped, even after the app was closed or crashed.
 - Download a course again later and only what is **new or changed** is fetched. Lectures you already have are left alone, and renamed lectures are moved instead of downloaded again.
+- If one lecture fails, the rest of the course keeps downloading. The course details view lists every lecture, and a failed one gets its own **Retry** button so you only redo what actually failed.
 - See the current lecture, quality, speed and overall progress for every course.
 - Failed downloads state the reason and offer Retry. A dropped connection is retried automatically. Downloads interrupted by closing the app come back with a Resume button.
 - A live badge on the Downloads tab shows what is running, even when you are on another screen.
