@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1](https://github.com/rahulgurujala/coursegrab/compare/v2.1.0...v2.1.1) (2026-09-29)
+
+
+### Bug Fixes
+
+* one lecture failing no longer blocks the rest of the course ([#22](https://github.com/rahulgurujala/coursegrab/issues/22)) ([e7de89e](https://github.com/rahulgurujala/coursegrab/commit/e7de89efef7d287e6211bbae3099aed24fd50136))
+
 ## [2.1.0](https://github.com/rahulgurujala/coursegrab/compare/v2.0.0...v2.1.0) (2026-09-28)
 
 
