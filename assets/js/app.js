@@ -509,6 +509,9 @@ $("#app").on("click", ".download-btn, .retry-btn, .update-btn", async function(e
   var $course = $(this).closest(".course");
   var courseid = $course.attr("course-id");
   if (downloadControls[courseid]) return; // already preparing or downloading
+  // a course in the error state is retrying (finish what failed), not checking for updates,
+  // whichever of the three buttons actually triggered it
+  var isRetry = $course.attr("data-state") == "error";
   ensureDownloadRow($course);
   var $all = $('.course[course-id="' + courseid + '"]');
   var prep = { cancelled: false, failed: false };
@@ -530,8 +533,11 @@ $("#app").on("click", ".download-btn, .retry-btn, .update-btn", async function(e
       { id: courseid, title: $course.find(".coursename").text(), url: $course.attr("course-url") },
       prep,
       function(done, total) {
-        ui.Row.text($all, translate("Preparing course") + "… " + done + "/" + total);
-      }
+        var text = translate("Preparing course") + "… " + done + "/" + total;
+        ui.Row.text($all, text);
+        if (typeof courseDetail != "undefined") courseDetail.prepProgress(courseid, text);
+      },
+      isRetry
     );
     if (!data || prep.cancelled) return;
     if (Object.keys(data.subs).length) {
@@ -545,6 +551,53 @@ $("#app").on("click", ".download-btn, .retry-btn, .update-btn", async function(e
     ui.Row.state($all, "error");
     ui.Row.text($all, prepError(err.status));
   }
+});
+
+// After a course finishes with some lectures failed, "done"/"total"/"failed" is recomputed
+// from courseStore and reflected on the row: this is what lets a single retried lecture flip
+// the whole course row back to Completed once nothing is left failing.
+function refreshCourseRowFromStore(courseId) {
+  var store = courseStore[courseId];
+  if (!store) return;
+  var entries = [];
+  store.chapters.forEach(function(c) {
+    entries = entries.concat(c.lectures);
+  });
+  var failed = entries.filter(function(e) {
+    return e.state == "failed";
+  }).length;
+  var done = entries.filter(function(e) {
+    return e.state == "done" || e.state == "saved" || e.state == "unchanged";
+  }).length;
+  var total = entries.length;
+  var $row = $('.course[course-id="' + courseId + '"]');
+  if (!$row.length || $row.attr("data-state") == "downloading" || $row.attr("data-state") == "paused") return;
+  if (!failed) {
+    ui.Row.state($row, "done");
+    ui.Row.text($row, translate("Completed"));
+    ui.Row.progress($row, total, total);
+  } else {
+    ui.Row.state($row, "error");
+    ui.Row.text(
+      $row,
+      translate("Downloaded") + " " + done + "/" + total + " · " + failed + " " + translate(failed == 1 ? "lecture failed" : "lectures failed")
+    );
+  }
+}
+
+$(document).on("click", ".lretry", async function(e) {
+  e.stopPropagation();
+  var $btn = $(this).prop("disabled", true);
+  var courseId = courseDetail.currentCourseId();
+  var lectureId = $(this).closest(".lecture").attr("data-lid");
+  if (!courseId || !lectureId) {
+    $btn.prop("disabled", false);
+    return;
+  }
+  var ok = await retryLecture(courseId, lectureId);
+  $btn.prop("disabled", false);
+  if (ok) refreshCourseRowFromStore(courseId);
+  else ui.toast(translate("That lecture could not be downloaded. Check your connection and try again."), true);
 });
 
 // ---------- logout ----------

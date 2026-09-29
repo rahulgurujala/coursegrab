@@ -189,6 +189,14 @@ function httpError(status) {
   return err;
 }
 
+function describeError(status, name) {
+  var base =
+    status == 401 || status == 403
+      ? translate("Access was denied. Your session may have expired: sign in again, then retry.")
+      : translate("The connection was interrupted.");
+  return (name ? "“" + name + "”: " : "") + base;
+}
+
 // ---------- reading a course ----------
 // Picks a downloadable mp4. Streams that are only served as HLS or DASH (which is how
 // protected videos are delivered) are not downloadable, so they return null.
@@ -283,7 +291,7 @@ async function loadLecture(lecture, chapter, course, options, data) {
 
 // Reads the curriculum and every lecture. Lectures without a downloadable file stay in place as
 // "Skipped" entries so numbering matches the course, and are listed in data.skipped.
-async function prepareCourse(course, prep, onProgress) {
+async function prepareCourse(course, prep, onProgress, retryOnly) {
   var options = settings.getAll().download;
   var curriculum = await api(
     `https://${subDomain}.udemy.com/api-2.0/courses/${course.id}/cached-subscriber-curriculum-items?page_size=100000`
@@ -334,6 +342,20 @@ async function prepareCourse(course, prep, onProgress) {
     }
   });
 
+  if (retryOnly) {
+    // a retry only finishes what failed or was never attempted; already-downloaded lectures
+    // are trusted as is instead of re-fetched, which is what makes a retry fast
+    var manifest = readManifest(courseDir(course.title));
+    var known = manifest ? manifest.lectures : {};
+    var dir = courseDir(course.title);
+    tasks = tasks.filter(function(task) {
+      var entry = known[task.lecture.id];
+      var trusted = entry && entry.done !== false && entry.primary && fs.existsSync(path.join(dir, entry.primary));
+      if (trusted) task.lecture._trusted = true;
+      return !trusted;
+    });
+  }
+
   var done = 0;
   var denied = 0;
   await pool(tasks, 6, async function(task) {
@@ -374,6 +396,15 @@ function planUpdates(data, dir, options, inScope, dryRun) {
         // outside the chosen lecture range: leave files and records alone
         lecture.status = "outside";
         lecture.skip = true;
+        return;
+      }
+
+      if (lecture._trusted) {
+        // retrying the course: already downloaded successfully before, take it as is without
+        // re-checking Udemy for this lecture (that is what Get updates is for)
+        lecture.status = "unchanged";
+        lecture.skip = true;
+        counts.unchanged++;
         return;
       }
 
@@ -451,6 +482,254 @@ function attachmentName(lectureIndex, index, asset) {
   var sourceExt = asset.src.split("/").pop().split(".").pop().split("?").shift();
   var nameExt = asset.name.split(".").pop();
   return sanitize(base + (nameExt == sourceExt ? "" : "." + sourceExt));
+}
+
+// Downloads exactly one lecture, independent of any running course-level download.
+// Used by the Retry action on a single failed lecture in the course details view.
+async function retryLecture(courseId, lectureId) {
+  if (downloadControls[courseId]) return false; // the course itself is busy; try again once it finishes
+  var store = courseStore[courseId];
+  if (!store || !store.byId[lectureId]) return false;
+
+  function setLecture(patch) {
+    Object.assign(store.byId[lectureId], patch);
+    touchStore(courseId, lectureId);
+  }
+  setLecture({ state: "downloading", pct: 0, reason: "" });
+
+  var course = { id: courseId, title: store.title, url: null };
+  var options = settings.getAll().download;
+  var dir = store.dir || courseDir(store.title);
+
+  try {
+    var curriculum = await api(
+      `https://${subDomain}.udemy.com/api-2.0/courses/${courseId}/cached-subscriber-curriculum-items?page_size=100000`
+    );
+    // walk the curriculum to find this lecture's chapter and its position within it
+    var ci = -1;
+    var chapterName = "";
+    var position = 0;
+    var found = null;
+    (curriculum.results || []).some(function(v) {
+      if (v._class == "chapter") {
+        ci++;
+        chapterName = v.title;
+        position = 0;
+        return false;
+      }
+      if (v._class != "lecture") return false;
+      var assetType = v.asset && v.asset.asset_type;
+      if (!["Video", "Article", "File", "E-Book"].includes(assetType)) return false;
+      position++;
+      if (v.id != lectureId) return false;
+      found = {
+        ci: ci,
+        chapterName: chapterName,
+        position: position,
+        lecture: {
+          id: v.id,
+          assetId: v.asset.id,
+          assetCreated: v.asset.created || v.created || null,
+          name: v.title,
+          type: assetType == "E-Book" ? "File" : assetType,
+          assetType: assetType
+        }
+      };
+      return true; // stop walking, found it
+    });
+    if (!found) throw httpError(404);
+
+    var courseUrl = $('.course[course-id="' + courseId + '"]').first().attr("course-url");
+    await loadLecture(found.lecture, { name: found.chapterName }, { id: courseId, url: courseUrl }, options, {
+      subs: {},
+      skipped: []
+    });
+
+    if (found.lecture.type == "Skipped") {
+      setLecture({ state: "skipped", reason: found.lecture.reason, pct: 0, badge: null });
+      return false;
+    }
+
+    var folder = path.join(dir, chapterFolder(found.ci, { name: found.chapterName }));
+    await fs.promises.mkdir(folder, { recursive: true });
+    var primary = path.join(chapterFolder(found.ci, { name: found.chapterName }), primaryName(found.position - 1, found.lecture));
+    var target = path.join(dir, primary);
+    // a stale partial download resumes with the URL it was started with, not the one just
+    // fetched above; this is a deliberate fresh retry, so start clean rather than risk resuming
+    // against a URL that may no longer be valid
+    removeQuietly(target + ".mtd");
+
+    if (found.lecture.type == "Article" || found.lecture.type == "Url") {
+      await fs.promises.writeFile(target, found.lecture.src);
+    } else {
+      await retryOneFile(found.lecture.src, target, function(pct) {
+        setLecture({ pct: pct });
+      });
+    }
+
+    if (found.lecture.caption && !options.skipSubtitles) {
+      var lang = found.lecture.caption["English"] ? "English" : Object.keys(found.lecture.caption)[0];
+      await fetchSubtitleStandalone(found.lecture.caption[lang], folder, found.position - 1, found.lecture);
+    }
+    if (found.lecture.supplementary && !options.skipAttachments) {
+      for (var ai = 0; ai < found.lecture.supplementary.length; ai++) {
+        var asset = found.lecture.supplementary[ai];
+        var file = path.join(folder, attachmentName(found.position - 1, ai, asset));
+        if (asset.type == "Url" || asset.type == "Article") await fs.promises.writeFile(file, asset.src);
+        else await retryOneFile(asset.src, file, function() {});
+      }
+    }
+
+    var manifest = readManifest(dir) || { version: 1, courseId: courseId, title: store.title, lectures: {} };
+    var size = null;
+    try {
+      size = fs.statSync(target).size;
+    } catch (e) {}
+    manifest.lectures[lectureId] = {
+      assetId: found.lecture.assetId,
+      created: found.lecture.assetCreated,
+      title: found.lecture.name,
+      primary: primary,
+      quality: found.lecture.quality,
+      subs: !options.skipSubtitles,
+      attach: !options.skipAttachments,
+      done: true,
+      at: new Date().toISOString()
+    };
+    manifest.title = store.title;
+    manifest.updatedAt = new Date().toISOString();
+    writeManifest(dir, manifest);
+
+    setLecture({
+      state: "done",
+      pct: 100,
+      size: size,
+      note: /^\d+$/.test(String(found.lecture.quality || "")) ? found.lecture.quality + "p" : found.lecture.quality || "",
+      badge: null
+    });
+    return true;
+  } catch (err) {
+    setLecture({ state: "failed", reason: describeError(err.status), speed: 0 });
+    return false;
+  }
+}
+
+// A small retrying single-file downloader, for retryLecture (no pause/resume, just retry on drop).
+function retryOneFile(url, dest, onProgress) {
+  var downloader = new Downloader();
+  function attempt() {
+    return new Promise(function(resolve, reject) {
+      var dl = fs.existsSync(dest + ".mtd") ? downloader.resumeDownload(dest) : downloader.download(url, dest);
+      // status 2 ("error, retrying") is the library resuming just the one thread that hiccupped,
+      // not a restart of the whole file: with 5 parallel connections on a large lecture, one of
+      // them dropping briefly is normal. Setting this to 0 (as an earlier version of this file
+      // did) disabled that per-thread recovery, so any single-thread hiccup hard-failed the whole
+      // file and our own outer retry restarted it from scratch, i.e. exactly "100% then back to 0%
+      // then failed". A short retry interval keeps a truly dead connection from stalling long, the
+      // stall watchdog below is the backstop for that.
+      dl.setRetryOptions({ maxRetries: 2, retryInterval: 1500 });
+      dl.setOptions({ threadsCount: 5 });
+      var notStarted = 0;
+      // give up only on no byte progress for a while, not a fixed clock: see the comment on the
+      // same watchdog in fetchFile, a large lecture can legitimately still be transferring
+      var lastBytes = 0;
+      var stalledSince = Date.now();
+      var timer = setInterval(function() {
+        if (dl.status == 0) {
+          // give up instead of polling forever if it never starts downloading at all
+          notStarted++;
+          if (notStarted >= 20) settle(httpError(0));
+          return;
+        }
+        if (dl.status == 1 || dl.status == -1) {
+          var stats = dl.getStats();
+          var bytes = stats.total.downloaded || 0;
+          if (bytes > lastBytes) {
+            lastBytes = bytes;
+            stalledSince = Date.now();
+          } else if (dl.status == 1 && Date.now() - stalledSince > 20000) {
+            try {
+              dl.stop();
+            } catch (e) {}
+            settle(httpError(0));
+            return;
+          }
+          onProgress(Math.round(stats.total.completed) || 0);
+        }
+        if (dl.status == -1) {
+          clearInterval(timer);
+          if (dl.stats.total.size == 0 && fs.existsSync(dl.filePath)) {
+            settle();
+            return;
+          }
+          $.ajax({
+            type: "HEAD",
+            url: dl.url,
+            error: function(xhr) {
+              if (xhr.status == 401 || xhr.status == 403) removeQuietly(dl.filePath);
+              settle(httpError(xhr.status));
+            },
+            success: function() {
+              settle(httpError(0));
+            }
+          });
+        }
+      }, 1000);
+      var settled = false;
+      function settle(err) {
+        if (settled) return;
+        settled = true;
+        clearInterval(timer);
+        err ? reject(err) : resolve();
+      }
+      dl.on("error", function() {});
+      dl.on("end", function() {
+        settle();
+      });
+      dl.start();
+    });
+  }
+  return (async function() {
+    for (var i = 1; ; i++) {
+      try {
+        return await attempt();
+      } catch (e) {
+        if (i >= 2) throw e;
+        await new Promise(function(r) {
+          setTimeout(r, 1500 * i);
+        });
+      }
+    }
+  })();
+}
+
+// Same subtitle fetch as inside initDownload, usable standalone by retryLecture.
+function fetchSubtitleStandalone(url, dir, lectureIndex, lecture) {
+  var vttName = sanitize(lectureIndex + 1 + ". " + lecture.name.trim() + ".vtt");
+  var vtt = path.join(dir, vttName);
+  var srt = vtt.replace(/\.vtt$/, ".srt");
+  if (fs.existsSync(srt)) return Promise.resolve();
+  return new Promise(function(resolve, reject) {
+    var out = fs.createWriteStream(vtt);
+    out.on("finish", resolve);
+    out.on("error", reject);
+    https.get(url, function(response) {
+      response.pipe(out);
+    }).on("error", reject);
+  })
+    .then(function() {
+      return new Promise(function(resolve, reject) {
+        var final = fs.createWriteStream(srt);
+        final.on("finish", resolve);
+        final.on("error", reject);
+        fs.createReadStream(vtt)
+          .pipe(vtt2srt())
+          .pipe(final);
+      });
+    })
+    .then(function() {
+      removeQuietly(vtt);
+    });
 }
 
 async function initDownload($course, data, subtitle = false) {
@@ -534,11 +813,7 @@ async function initDownload($course, data, subtitle = false) {
   };
 
   function errorReason(status) {
-    var base =
-      status == 401 || status == 403
-        ? translate("Access was denied. Your session may have expired: sign in again, then retry.")
-        : translate("The connection was interrupted.");
-    return (view.name ? "“" + view.name + "”: " : "") + base;
+    return describeError(status, view.name);
   }
 
   function finish(kind, text) {
@@ -575,8 +850,22 @@ async function initDownload($course, data, subtitle = false) {
         err ? reject(err) : resolve();
       }
       current = { dl: dl, abort: function() { settle(new Error("cancelled")); } };
+      // Some connection failures make the library retry forever internally, cycling through its own
+      // states without ever reaching a terminal one (observed directly against a dropped connection).
+      // Give up only when there has been no byte progress for a while, not on a fixed clock: a large
+      // lecture (real ones run to several hundred MB) can legitimately still be transferring well past
+      // any fixed ceiling, and a first version of this watchdog wrongly killed those.
+      var lastBytes = 0;
+      var stalledSince = Date.now();
 
-      dl.setRetryOptions({ retryInterval: 5000 });
+      // status 2 ("error, retrying") is the library resuming just the one thread that hiccupped,
+      // not a restart of the whole file: with 5 parallel connections on a large lecture, one of
+      // them dropping briefly is normal. Setting this to 0 (as an earlier version of this file
+      // did) disabled that per-thread recovery, so any single-thread hiccup hard-failed the whole
+      // file and our own outer retry restarted it from scratch, i.e. exactly "100% then back to 0%
+      // then failed". A short retry interval keeps a truly dead connection from stalling long, the
+      // stall watchdog below is the backstop for that.
+      dl.setRetryOptions({ maxRetries: 2, retryInterval: 1500 });
       dl.setOptions({ threadsCount: 5 });
       dl.on("error", function() {
         // handled through the status checks below
@@ -594,13 +883,18 @@ async function initDownload($course, data, subtitle = false) {
       timer = setInterval(function() {
         switch (dl.status) {
           case 0:
-            // if it does not start in a reasonable time, start again; errors of older tries are ignored
-            if (restarted <= 5) {
-              notStarted++;
-              if (notStarted >= 15) {
-                dl.start();
-                notStarted = 0;
+            // if it never starts, kick it a couple of times; if it still never starts, give up
+            // instead of polling forever (this used to be unbounded and could hang indefinitely)
+            notStarted++;
+            if (notStarted >= 8) {
+              notStarted = 0;
+              if (restarted < 2) {
                 restarted++;
+                dl.start();
+              } else {
+                clearInterval(timer);
+                settle(httpError(0));
+                break;
               }
             }
             view.speed = 0;
@@ -608,6 +902,17 @@ async function initDownload($course, data, subtitle = false) {
             break;
           case 1:
             var running = dl.getStats();
+            var runningBytes = running.total.downloaded || 0;
+            if (runningBytes > lastBytes) {
+              lastBytes = runningBytes;
+              stalledSince = Date.now();
+            } else if (Date.now() - stalledSince > 20000) {
+              try {
+                dl.stop();
+              } catch (e) {}
+              settle(httpError(0));
+              break;
+            }
             view.speed = parseInt(running.present.speed / 1000) || 0;
             view.filePct = Math.round(running.total.completed) || 0;
             paint();
@@ -651,7 +956,7 @@ async function initDownload($course, data, subtitle = false) {
         return await fetchFile(url, dest);
       } catch (err) {
         var denied = err.status == 401 || err.status == 403;
-        if (cancelled || denied || attempt >= 3) throw err;
+        if (cancelled || denied || attempt >= 2) throw err;
         ui.Row.text(rows(), translate("Connection lost, trying again") + "…");
         await new Promise(function(resolve) {
           setTimeout(resolve, 1500 * attempt);
@@ -784,11 +1089,21 @@ async function initDownload($course, data, subtitle = false) {
       return;
     }
 
+    var failed = [];
     for (var item of work) {
       if (cancelled) return;
       currentItem = item;
       mark(item.lecture, { state: "downloading", pct: 0 });
-      await downloadLecture(item);
+      try {
+        await downloadLecture(item);
+      } catch (err) {
+        if (cancelled) return;
+        var reason = errorReason(err.status);
+        mark(item.lecture, { state: "failed", reason: reason, speed: 0, pct: 0 });
+        failed.push({ chapter: data.chapters[item.ci].name, name: item.lecture.name, reason: reason });
+        currentItem = null;
+        continue; // one lecture failing must not stop the rest of the course
+      }
       if (cancelled) return;
       var savedSize = null;
       try {
@@ -809,8 +1124,15 @@ async function initDownload($course, data, subtitle = false) {
       ? " · " + plan.counts.new + " " + translate("new") + ", " + plan.counts.updated + " " + translate("updated") + ", " + plan.counts.unchanged + " " + translate("unchanged")
       : "";
     ui.Row.progress(rows(), total, total);
-    if (store) store.phase = "done";
-    finish("done", translate("Completed") + " · " + when + changes + skippedNote);
+    if (failed.length) {
+      if (store) store.phase = "error";
+      var failNote =
+        " · " + failed.length + " " + translate(failed.length == 1 ? "lecture failed" : "lectures failed");
+      finish("error", translate("Downloaded") + " " + done + "/" + total + failNote + skippedNote);
+    } else {
+      if (store) store.phase = "done";
+      finish("done", translate("Completed") + " · " + when + changes + skippedNote);
+    }
   } catch (err) {
     if (cancelled) return;
     if (currentItem) mark(currentItem.lecture, { state: "failed", reason: errorReason(err.status), speed: 0 });

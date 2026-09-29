@@ -22,6 +22,7 @@ A free, ad-free, cross-platform desktop downloader with no accounts of its own. 
 - Views: Sign in, Courses (search and list), Downloads (per-course progress with pause, resume, cancel, open folder and retry), a course details view (every lecture with its live state, and a dry-run comparison with Udemy), Settings and About, plus dialogs for the subtitle language and logout confirmation.
 - Downloads are long-running; the window may be open for hours. Course lists can be large; search filters them.
 - Some lectures cannot be downloaded (for example DRM protected video). They are skipped and listed, never allowed to block the rest of the course. CourseGrab does not decrypt protected content.
+- A lecture that fails for another reason (a dropped connection, a server error) does not stop the rest of the course either. It is marked failed, with its own Retry action in the course details view, and a course-level Retry only re-attempts what failed or was missing, not the whole course.
 - Each course folder holds a `.coursegrab.json` record so a later run can detect new, replaced or renamed lectures. Interrupted downloads resume from the data already saved.
 - Interface language is user-selectable (English plus more than 20 locales, including Arabic and Persian, so right to left support must be preserved). Strings are translated by English text key through `translate()` and `locale/*.json`.
 

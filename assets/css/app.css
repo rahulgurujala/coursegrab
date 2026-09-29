@@ -837,6 +837,12 @@ button {
   gap: 6px;
 }
 
+.lecture .lstatus .btn {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
 .lecture[data-state="unchanged"] .lname,
 .lecture[data-state="outside"] .lname {
   color: var(--text-muted);

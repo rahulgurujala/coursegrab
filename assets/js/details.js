@@ -67,12 +67,16 @@ var courseDetail = (function() {
 
   function lectureHtml(e) {
     var badge = badgeLabel(e);
+    var retry =
+      e.state == "failed"
+        ? '<button class="btn ghost lretry" type="button" title="' + esc(translate("Retry this lecture")) + '">' + esc(translate("Retry")) + "</button>"
+        : "";
     return (
       '<li class="lecture" data-lid="' + esc(e.id) + '" data-state="' + e.state + '"' + (e.badge ? ' data-badge="' + e.badge + '"' : "") + ">" +
       '<span class="lnum">' + esc(e.num) + "</span>" +
       '<span class="lbody"><span class="lname">' + esc(e.name) + '</span><span class="lmeta">' + esc(metaText(e)) + "</span></span>" +
       '<span class="lstatus">' + (badge ? '<span class="pill badge-' + e.badge + '">' + esc(badge) + "</span>" : "") +
-      '<span class="pill state-' + e.state + '">' + esc(stateLabel(e)) + "</span></span>" +
+      '<span class="pill state-' + e.state + '">' + esc(stateLabel(e)) + "</span>" + retry + "</span>" +
       '<span class="lbar" aria-hidden="true"><span class="lfill" style="--p:' + (e.state == "downloading" ? e.pct / 100 : 0) + '"></span></span>' +
       "</li>"
     );
@@ -284,6 +288,15 @@ var courseDetail = (function() {
         renderActions();
         renderSummary();
       }
+    },
+    // the "preparing" phase has no per-lecture data yet; show progress as plain text instead
+    prepProgress: function(courseId, text) {
+      if (String(courseId) == openId && $("#view-course").hasClass("active")) {
+        $("#course-notice").text(text).prop("hidden", false);
+      }
+    },
+    currentCourseId: function() {
+      return openId;
     }
   };
 })();
