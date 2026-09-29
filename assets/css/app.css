@@ -1438,8 +1438,82 @@ dialog[open] {
   color: var(--on-danger);
 }
 
+/* ---------- update banner ---------- */
+.update-banner {
+  position: fixed;
+  inset-block-end: 20px;
+  inset-inline-start: 20px;
+  z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: min(360px, calc(100vw - 40px));
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-pop);
+  animation: pop 0.2s var(--ease);
+}
+
+.update-banner > .icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--accent);
+}
+
+.update-banner .ub-title {
+  font-weight: 600;
+}
+
+.update-banner .ub-sub {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.update-banner .ub-sub:empty {
+  display: none;
+}
+
+.update-banner .ub-progress {
+  margin-top: 10px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.update-banner .ub-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.3s var(--ease);
+}
+
+.update-banner .ub-actions {
+  flex: none;
+}
+
+.update-banner .ub-actions:empty {
+  display: none;
+}
+
+.update-banner #update-dismiss {
+  flex: none;
+  margin-inline-start: -4px;
+}
+
 /* ---------- responsive ---------- */
 @media (max-width: 860px) {
+  .update-banner {
+    inset-inline-start: 76px;
+    width: min(340px, calc(100vw - 96px));
+  }
+
   .app {
     grid-template-columns: 64px minmax(0, 1fr);
   }

@@ -707,33 +707,7 @@ $("#set-choose").click(function() {
   }
 });
 
-// ---------- about / updates ----------
-$("#check-updates").click(function() {
-  var $btn = $(this);
-  var $status = $("#update-status");
-  $btn.prop("disabled", true);
-  $status.text(translate("Checking for Updates") + "…");
-  $.getJSON("https://api.github.com/repos/rahulgurujala/coursegrab/releases/latest")
-    .done(function(response) {
-      if (response.tag_name != `v${appVersion}`) {
-        $status.html(
-          `${esc(translate("New Update Available"))}: ${esc(response.tag_name)} · <a href="https://github.com/rahulgurujala/coursegrab/releases/latest">${esc(translate("Download"))}</a>`
-        );
-      } else {
-        $status.text(translate("No updates available"));
-      }
-    })
-    .fail(function(xhr) {
-      $status.text(
-        xhr.status == 404
-          ? translate("No updates available")
-          : translate("Could not check for updates.")
-      );
-    })
-    .always(function() {
-      $btn.prop("disabled", false);
-    });
-});
+// Update checking and the About page's status line live in updater.js.
 
 // ---------- subtitle picker ----------
 // One shared dialog; requests from several courses wait their turn.
