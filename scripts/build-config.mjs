@@ -37,7 +37,8 @@ export const srcEntries = [
   "src/download/rangeDownloader.ts",
   "src/download/naming.ts",
   "src/download/fsUtils.ts",
-  "src/download/planner.ts"
+  "src/download/planner.ts",
+  "src/download/orchestrator.ts"
 ];
 
 export const srcBuildOptions = {

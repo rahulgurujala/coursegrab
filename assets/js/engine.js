@@ -14,6 +14,7 @@ const courseStoreModule = require("./dist/store/courseStore.js");
 const naming = require("./dist/download/naming.js");
 const fsUtils = require("./dist/download/fsUtils.js");
 const planner = require("./dist/download/planner.js");
+const orchestratorModule = require("./dist/download/orchestrator.js");
 
 const SKIPPED_FILE = "Skipped lectures.txt";
 
@@ -288,30 +289,8 @@ async function prepareCourse(course, prep, onProgress, retryOnly) {
 }
 
 // ---------- running a download ----------
-function fetchSubtitle(url, dir, lectureIndex, lecture) {
-  var vttName = sanitize(lectureIndex + 1 + ". " + lecture.name.trim() + ".vtt");
-  var vtt = path.join(dir, vttName);
-  var srt = vtt.replace(/\.vtt$/, ".srt");
-  if (fs.existsSync(srt)) return Promise.resolve();
-  return new Promise(function(resolve, reject) {
-    var out = fs.createWriteStream(vtt);
-    out.on("finish", resolve);
-    out.on("error", reject);
-    https.get(url, function(response) { response.pipe(out); }).on("error", reject);
-  })
-    .then(function() {
-      return new Promise(function(resolve, reject) {
-        var final = fs.createWriteStream(srt);
-        final.on("finish", resolve);
-        final.on("error", reject);
-        fs.createReadStream(vtt).pipe(vtt2srt()).pipe(final);
-      });
-    })
-    .then(function() {
-      removeQuietly(vtt);
-    });
-}
-
+// (the actual download control flow, including its own subtitle fetch, is now
+// src/download/orchestrator.ts; only retryLecture's standalone path below is still here)
 // Downloads exactly one lecture, independent of any running course-level download.
 // Used by the Retry action on a single failed lecture in the course details view.
 async function retryLecture(courseId, lectureId) {
@@ -520,6 +499,10 @@ function fetchSubtitleStandalone(url, dir, lectureIndex, lecture) {
     });
 }
 
+// The control flow (sequencing, retry, pause/resume/cancel) lives in src/download/orchestrator.ts
+// as CourseDownload, which knows nothing about the DOM or translate(): it emits typed events
+// carrying raw data, and this function's only job is turning those into exactly the same
+// ui.Row.*/mark()/translate() calls the old, single monolithic initDownload() made inline.
 async function initDownload($course, data, subtitle = false) {
   if (data.prep && data.prep.cancelled) return;
   var courseId = $course.attr("course-id");
@@ -531,77 +514,13 @@ async function initDownload($course, data, subtitle = false) {
 
   var options = settings.getAll().download;
   var dir = courseDir(data.name);
-  var view = { quality: "", speed: 0, name: "", filePct: 0 };
-  var cancelled = false;
-  var paused = false;
-  var canPause = false;
-  var current = null; // { dl, abort } of the file being downloaded
-  var downloader = new Downloader();
-  var done = 0;
-  var total = 0;
-
   var store = null;
-  var currentItem = null;
-  function mark(lecture, patch) {
-    if (!store || !store.byId[lecture.id]) return;
-    Object.assign(store.byId[lecture.id], patch);
-    touchStore(courseId, lecture.id);
-  }
+  var cancelled = false;
 
-  ui.Row.state(rows(), "downloading");
-  ui.Row.now(rows(), "");
-  rows().attr("data-path", dir);
-
-  function paint() {
-    var parts = [translate("Lecture") + " " + Math.min(done + 1, total) + "/" + total];
-    if (view.quality) parts.push(view.quality);
-    if (!paused && view.speed) parts.push(ui.formatSpeed(view.speed));
-    ui.Row.progress(rows(), done + (view.filePct || 0) / 100, total);
-    ui.Row.text(rows(), (paused ? translate("Paused") + " · " : "") + parts.join(" · "));
-    ui.Row.now(rows(), view.name + (view.filePct ? " · " + view.filePct + "%" : ""));
-    if (currentItem) mark(currentItem.lecture, { pct: view.filePct || 0, speed: paused ? 0 : view.speed, note: view.quality });
-  }
-
-  downloadControls[courseId] = {
-    pause: function() {
-      if (!canPause || cancelled || !current) return;
-      try {
-        current.dl.stop();
-      } catch (e) {}
-      paused = true;
-      view.speed = 0;
-      ui.Row.state(rows(), "paused");
-      paint();
-    },
-    resume: function() {
-      try {
-        if (current) current.dl.resume();
-      } catch (e) {}
-      paused = false;
-      ui.Row.state(rows(), "downloading");
-      paint();
-    },
-    cancel: function() {
-      cancelled = true;
-      if (current) {
-        try {
-          current.dl.stop();
-        } catch (e) {}
-        current.abort();
-      }
-      if (currentItem) mark(currentItem.lecture, { state: "queued", pct: 0, speed: 0 });
-      if (store) store.phase = "idle";
-      touchStore(courseId);
-      delete downloadControls[courseId];
-      ui.Row.state(rows(), "idle");
-      ui.Row.text(rows(), translate("Canceled"));
-      ui.Row.now(rows(), "");
-      ui.Row.progress(rows(), 0, 0);
-    }
-  };
-
-  function errorReason(status) {
-    return describeError(status, view.name);
+  function mark(lectureId, patch) {
+    if (!store || !store.byId[lectureId]) return;
+    Object.assign(store.byId[lectureId], patch);
+    touchStore(courseId, lectureId);
   }
 
   function finish(kind, text) {
@@ -613,256 +532,137 @@ async function initDownload($course, data, subtitle = false) {
     ui.Row.now(rows(), "");
   }
 
-  // Downloads one file. Partly downloaded files continue where they stopped and complete files are kept.
-  // rangeDownloader.ts (see its header comment) retries each byte range on its own and only ever
-  // reports "end" once the file has actually been renamed to its final, complete name, so there is
-  // no separate watchdog here racing its own stop() against the download finishing anyway: what
-  // this promise settles with always matches what is really on disk.
-  function fetchFile(url, dest) {
-    return new Promise(function(resolve, reject) {
-      var dl;
-      if (fs.existsSync(dest + ".mtd")) {
-        dl = downloader.resumeDownload(dest);
-        if (!fs.statSync(dest + ".mtd").size) dl = downloader.download(url, dest);
-      } else if (fs.existsSync(dest)) {
-        resolve();
-        return;
-      } else {
-        dl = downloader.download(url, dest);
-      }
-
-      var settled = false;
-      function settle(err) {
-        if (settled) return;
-        settled = true;
-        canPause = false;
-        current = null;
-        err ? reject(err) : resolve();
-      }
-      current = { dl: dl, abort: function() { settle(new Error("cancelled")); } };
-      dl.setRetryOptions({ maxRetries: 2, retryInterval: 1500 });
-      dl.setOptions({ threadsCount: 5, timeout: 20000 });
-      dl.on("start", function() {
-        canPause = true;
-      });
-      dl.on("progress", function(stats) {
-        view.speed = parseInt(stats.present.speed / 1000) || 0;
-        view.filePct = Math.round(stats.total.completed) || 0;
-        paint();
-      });
-      dl.on("log", function(e) {
-        devlog[e.level == "error" ? "error" : e.level == "warn" ? "warn" : "info"](courseId, view.name + ": " + e.text);
-      });
-      dl.on("end", function() {
-        settle();
-      });
-      dl.on("error", function() {
-        var status = (dl.error && dl.error.status) || 0;
-        devlog.error(courseId, view.name + ": failed (" + (status || "connection") + ")");
-        if (status == 401 || status == 403) removeQuietly(dl.filePath, dl.filePath + ".mtd", dl.filePath + ".mtd.meta.json");
-        settle(httpError(status));
-      });
-      dl.start();
-    });
-  }
-
-  // A dropped connection is retried a few times, continuing from the data already saved.
-  async function fetchFileWithRetry(url, dest) {
-    for (var attempt = 1; ; attempt++) {
-      try {
-        return await fetchFile(url, dest);
-      } catch (err) {
-        var denied = err.status == 401 || err.status == 403;
-        if (cancelled || denied || attempt >= 2) throw err;
-        devlog.warn(courseId, view.name + ": lecture-level retry " + attempt + " after " + (err.status || "connection error"));
-        ui.Row.text(rows(), translate("Connection lost, trying again") + "…");
-        await new Promise(function(resolve) {
-          setTimeout(resolve, 1500 * attempt);
-        });
-        if (cancelled) throw err;
-      }
+  var cd = new orchestratorModule.CourseDownload({
+    courseId: courseId,
+    data: data,
+    dir: dir,
+    options: options,
+    subtitle: subtitle,
+    plan: function(inScope) {
+      return planUpdates(data, dir, options, inScope);
+    },
+    onLog: function(logCourseId, level, text) {
+      devlog[level](logCourseId, text);
     }
-  }
+  });
 
-  async function saveLecture(item, manifest) {
-    var lecture = item.lecture;
-    manifest.lectures[lecture.id] = {
-      assetId: lecture.assetId,
-      created: lecture.assetCreated,
-      title: lecture.name,
-      primary: lecture.primary,
-      quality: lecture.quality,
-      subs: !options.skipSubtitles,
-      attach: !options.skipAttachments,
-      done: true,
-      at: new Date().toISOString()
-    };
-    manifest.title = data.name;
-    manifest.updatedAt = new Date().toISOString();
-    writeManifest(dir, manifest);
-  }
+  downloadControls[courseId] = {
+    pause: function() { cd.pause(); },
+    resume: function() { cd.resume(); },
+    cancel: function() { cd.cancel(); }
+  };
 
-  async function downloadLecture(item) {
-    var lecture = item.lecture;
-    var folder = path.join(dir, chapterFolder(item.ci, data.chapters[item.ci]));
-    await fs.promises.mkdir(folder, { recursive: true });
-    view.name = lecture.name;
-    view.filePct = 0;
-    view.quality = /^\d+$/.test(lecture.quality || "") && lecture.type == "Video" ? lecture.quality + "p" : lecture.quality || "";
-    paint();
+  cd.on("started", function(info) {
+    ui.Row.state(rows(), "downloading");
+    ui.Row.now(rows(), "");
+    rows().attr("data-path", info.dir);
+  });
 
-    var target = path.join(folder, primaryName(item.li, lecture));
-    if (lecture.type == "Article" || lecture.type == "Url") {
-      await fs.promises.writeFile(target, lecture.src);
-    } else {
-      await fetchFileWithRetry(lecture.src, target);
-    }
-    if (cancelled) return;
+  cd.on("status", function(key) {
+    var text = key == "checking-updates" ? translate("Checking for updates") : translate("Connection lost, trying again");
+    ui.Row.text(rows(), text + "…");
+  });
 
-    if (lecture.caption && subtitle) {
-      view.filePct = 0;
-      view.quality = "Subtitle";
-      view.speed = 0;
-      paint();
-      await fetchSubtitle(lecture.caption[subtitle] || lecture.caption[Object.keys(lecture.caption)[0]], folder, item.li, lecture);
-    }
-
-    if (lecture.supplementary) {
-      for (var ai = 0; ai < lecture.supplementary.length; ai++) {
-        if (cancelled) return;
-        var asset = lecture.supplementary[ai];
-        view.filePct = 0;
-        view.quality = asset.quality;
-        paint();
-        var file = path.join(folder, attachmentName(item.li, ai, asset));
-        if (asset.type == "Url" || asset.type == "Article") await fs.promises.writeFile(file, asset.src);
-        else await fetchFileWithRetry(asset.src, file);
-      }
-    }
-  }
-
-  try {
-    // what to download: every lecture in the chosen range, minus what is already saved and unchanged
-    var all = [];
-    data.chapters.forEach(function(chapter, ci) {
-      chapter.lectures.forEach(function(lecture, li) {
-        if (lecture.type != "Skipped") all.push({ ci: ci, li: li, lecture: lecture });
-      });
-    });
-    ui.Row.text(rows(), translate("Checking for updates") + "…");
-    var selected = all;
-    if (options.enableDownloadStartEnd && all.length) {
-      var start = Math.max(1, Math.min(options.downloadStart || 1, all.length));
-      var end = options.downloadEnd;
-      if (!end || end < 1 || end > all.length) end = all.length;
-      if (start > end) start = end;
-      selected = all.slice(start - 1, end);
-    }
-    var inScope = {};
-    selected.forEach(function(item) {
-      inScope[item.lecture.id] = true;
-    });
-    var plan = planUpdates(data, dir, options, inScope);
-    var work = selected.filter(function(item) {
-      return !item.lecture.skip;
-    });
-    total = work.length;
-    store = buildStore(courseId, data.name, dir, data, "downloading", plan.hadManifest);
+  cd.on("planned", function(info) {
+    store = buildStore(courseId, data.name, dir, data, "downloading", info.hadManifest);
     touchStore(courseId);
+  });
 
-    var skippedNote = data.skipped.length
-      ? " · " + data.skipped.length + " " + translate(data.skipped.length == 1 ? "lecture skipped (protected or unavailable)" : "lectures skipped (protected or unavailable)")
+  cd.on("lecture-start", function(item) {
+    mark(item.lecture.id, { state: "downloading", pct: 0 });
+  });
+
+  cd.on("progress", function(info) {
+    var view = info.view;
+    var parts = [translate("Lecture") + " " + Math.min(info.done + 1, info.total) + "/" + info.total];
+    if (view.quality) parts.push(view.quality);
+    if (!info.paused && view.speed) parts.push(ui.formatSpeed(view.speed));
+    ui.Row.progress(rows(), info.done + (view.filePct || 0) / 100, info.total);
+    ui.Row.text(rows(), (info.paused ? translate("Paused") + " · " : "") + parts.join(" · "));
+    ui.Row.now(rows(), view.name + (view.filePct ? " · " + view.filePct + "%" : ""));
+    if (info.currentItem) mark(info.currentItem.lecture.id, { pct: view.filePct || 0, speed: info.paused ? 0 : view.speed, note: view.quality });
+  });
+
+  cd.on("lecture-done", function(info) {
+    mark(info.item.lecture.id, { state: "done", pct: 100, size: info.size, speed: 0 });
+  });
+
+  cd.on("lecture-failed", function(info) {
+    mark(info.item.lecture.id, { state: "failed", reason: describeError(info.status, info.item.lecture.name), speed: 0, pct: 0 });
+  });
+
+  cd.on("row-progress", function(info) {
+    ui.Row.progress(rows(), info.done, info.total);
+  });
+
+  cd.on("paused", function() {
+    ui.Row.state(rows(), "paused");
+  });
+
+  cd.on("resumed", function() {
+    ui.Row.state(rows(), "downloading");
+  });
+
+  cd.on("cancelled", function(info) {
+    cancelled = true;
+    if (info.lectureId) mark(info.lectureId, { state: "queued", pct: 0, speed: 0 });
+    if (store) store.phase = "idle";
+    touchStore(courseId);
+    delete downloadControls[courseId];
+    ui.Row.state(rows(), "idle");
+    ui.Row.text(rows(), translate("Canceled"));
+    ui.Row.now(rows(), "");
+    ui.Row.progress(rows(), 0, 0);
+  });
+
+  cd.on("retrying", function() {
+    ui.Row.text(rows(), translate("Retrying") + "…");
+  });
+
+  cd.on("finished", function(info) {
+    var skippedNote = info.skippedCount
+      ? " · " + info.skippedCount + " " + translate(info.skippedCount == 1 ? "lecture skipped (protected or unavailable)" : "lectures skipped (protected or unavailable)")
       : "";
 
-    if (data.skipped.length) {
-      try {
-        fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(
-          path.join(dir, SKIPPED_FILE),
-          "These lectures were not downloaded because they are protected or unavailable.\n\n" +
-            data.skipped.map(function(s) { return s.chapter + ": " + s.name + " (" + s.reason + ")"; }).join("\n") +
-            "\n"
-        );
-      } catch (e) {}
-    }
-
-    if (!all.length) {
+    if (info.reason == "no-downloadable") {
       finish(
         "error",
-        data.skipped.length
+        info.skippedCount
           ? translate("None of the lectures can be downloaded. They are protected or unavailable.")
           : translate("This course has no downloadable lectures.")
       );
       return;
     }
 
-    var manifest = plan.manifest || { version: 1, courseId: courseId, title: data.name, lectures: {} };
-
-    if (!work.length) {
+    if (info.reason == "up-to-date") {
       var checked = new Date().toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
       ui.Row.progress(rows(), 1, 1);
-      writeManifest(dir, manifest);
       if (store) store.phase = "done";
-      finish("done", translate("Up to date") + " · " + plan.counts.unchanged + " " + translate("lectures unchanged") + skippedNote + " · " + checked);
+      finish("done", translate("Up to date") + " · " + info.counts.unchanged + " " + translate("lectures unchanged") + skippedNote + " · " + checked);
       return;
     }
 
-    var failed = [];
-    for (var item of work) {
-      if (cancelled) return;
-      currentItem = item;
-      mark(item.lecture, { state: "downloading", pct: 0 });
-      try {
-        await downloadLecture(item);
-      } catch (err) {
-        if (cancelled) return;
-        var reason = errorReason(err.status);
-        mark(item.lecture, { state: "failed", reason: reason, speed: 0, pct: 0 });
-        failed.push({ chapter: data.chapters[item.ci].name, name: item.lecture.name, reason: reason });
-        currentItem = null;
-        continue; // one lecture failing must not stop the rest of the course
-      }
-      if (cancelled) return;
-      var savedSize = null;
-      try {
-        savedSize = fs.statSync(path.join(dir, item.lecture.primary)).size;
-      } catch (e) {}
-      mark(item.lecture, { state: "done", pct: 100, size: savedSize, speed: 0 });
-      currentItem = null;
-      done++;
-      view.filePct = 0;
-      await saveLecture(item, manifest);
-      ui.Row.progress(rows(), done, total);
-    }
-    // lectures that were left alone keep their entry; make sure the file exists after a first run
-    writeManifest(dir, manifest);
-
-    var when = new Date().toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-    var changes = plan.hadManifest
-      ? " · " + plan.counts.new + " " + translate("new") + ", " + plan.counts.updated + " " + translate("updated") + ", " + plan.counts.unchanged + " " + translate("unchanged")
-      : "";
-    ui.Row.progress(rows(), total, total);
-    if (failed.length) {
+    if (info.reason == "unexpected-error") {
       if (store) store.phase = "error";
-      var failNote =
-        " · " + failed.length + " " + translate(failed.length == 1 ? "lecture failed" : "lectures failed");
-      finish("error", translate("Downloaded") + " " + done + "/" + total + failNote + skippedNote);
+      finish("error", describeError(info.status, info.lectureName));
+      return;
+    }
+
+    // "completed" or "partial-failure": the loop ran to the end, with real done/total/failed numbers
+    var when = new Date().toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    var changes = info.hadManifest
+      ? " · " + info.counts.new + " " + translate("new") + ", " + info.counts.updated + " " + translate("updated") + ", " + info.counts.unchanged + " " + translate("unchanged")
+      : "";
+    ui.Row.progress(rows(), info.total, info.total);
+    if (info.failed.length) {
+      if (store) store.phase = "error";
+      var failNote = " · " + info.failed.length + " " + translate(info.failed.length == 1 ? "lecture failed" : "lectures failed");
+      finish("error", translate("Downloaded") + " " + info.done + "/" + info.total + failNote + skippedNote);
     } else {
       if (store) store.phase = "done";
       finish("done", translate("Completed") + " · " + when + changes + skippedNote);
     }
-  } catch (err) {
-    if (cancelled) return;
-    if (currentItem) mark(currentItem.lecture, { state: "failed", reason: errorReason(err.status), speed: 0 });
-    if (store) store.phase = "error";
-    if (options.autoRetry && (data.retries || 0) < 5) {
-      data.retries = (data.retries || 0) + 1;
-      ui.Row.text(rows(), translate("Retrying") + "…");
-      setTimeout(function() {
-        initDownload(rows().filter("#downloads-list .course").first(), data, subtitle);
-      }, 5000 * data.retries);
-      return;
-    }
-    finish("error", errorReason(err.status));
-  }
+  });
+
+  await cd.run();
 }
