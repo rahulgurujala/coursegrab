@@ -72,6 +72,7 @@ It only works with courses you already have access to. Everything runs on your c
 - Light and dark themes that follow your system.
 - A resizable window that adapts to small sizes.
 - More than 20 interface languages, including right to left layouts.
+- Checks for a new version shortly after launch. On Windows and Linux it can download and install the update for you; on macOS it opens the download page, since the app is not signed and cannot safely update itself.
 - Keyboard shortcuts and screen reader friendly controls.
 - Settings save as you change them.
 
@@ -212,6 +213,14 @@ Open **Settings** to change these. Changes are saved immediately.
 | `Ctrl` or `Cmd` + `1` to `4` | Switch between Courses, Downloads, Settings and About |
 | `Esc` | Clear the search box while it is focused |
 
+<details>
+<summary><strong>How do updates work?</strong></summary>
+
+CourseGrab checks GitHub for a newer release a few seconds after launch, and whenever you press **Check for updates** on the About page. If one exists, a small card appears in the corner of the window.
+
+- **Windows and Linux:** press **Update** to download it in the background, then **Restart & update** to install it and relaunch.
+- **macOS:** press **Download**, which opens the new version's download page in your browser. The app cannot install it for you, because installers are not signed (see [Installation](#installation)); install it the same way you did the first time.
+
 ## Troubleshooting
 
 <details>
@@ -272,7 +281,7 @@ Signing out clears the saved token. Delete the folder to remove all settings.
 <details>
 <summary><strong>Is CourseGrab safe to use?</strong></summary>
 
-The code is open source, so you can read exactly what it does. The app itself contacts only Udemy and, when you press **Check for updates**, GitHub. The sign in window shows Udemy's own website, so it loads whatever Udemy's pages load. Your access token is stored in the settings file on your own computer. Installers are unsigned for now, which is why your system shows a warning (see [Installation](#installation)).
+The code is open source, so you can read exactly what it does. The app itself contacts only Udemy and, shortly after launch and when you press **Check for updates**, GitHub, to see whether a new version exists. The sign in window shows Udemy's own website, so it loads whatever Udemy's pages load. Your access token is stored in the settings file on your own computer. Installers are unsigned for now, which is why your system shows a warning (see [Installation](#installation)).
 
 </details>
 
