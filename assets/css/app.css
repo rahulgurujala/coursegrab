@@ -7,6 +7,12 @@
 :root {
   color-scheme: light dark;
 
+  /* content column width: generous enough to actually use a wide/fullscreen window instead of
+     leaving most of it empty, but still capped so a lecture row's text doesn't stretch edge to
+     edge on an ultrawide monitor */
+  --content-max: 1440px;
+  --sidebar-w: 220px;
+
   --accent: #2f5bea;
   --accent-hover: #2449cc;
   --accent-soft: #e8eefe;
@@ -380,7 +386,7 @@ button {
 /* ---------- shell ---------- */
 .app {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
   height: 100vh;
 }
 
@@ -520,7 +526,7 @@ button {
   align-items: center;
   gap: 16px;
   padding: 20px 28px 16px;
-  max-width: 920px;
+  max-width: var(--content-max);
   background: var(--canvas);
 }
 
@@ -543,7 +549,7 @@ button {
 
 .view-body {
   padding: 4px 28px 32px;
-  max-width: 920px;
+  max-width: var(--content-max);
 }
 
 .view-body.narrow {
@@ -551,18 +557,19 @@ button {
 }
 
 /* debug console: every request/retry/error for the open course, resizable, pinned to the
-   bottom of the scroll area (not the window) so it never fights the sidebar for space */
+   bottom of the actual window (position: sticky only docks once the content is tall enough to
+   scroll past it; a short lecture list left it floating mid-page with dead space below it) */
 .console {
-  position: sticky;
-  bottom: 0;
+  position: fixed;
+  inset-inline-start: calc(var(--sidebar-w) + 28px);
+  inset-block-end: 0;
+  width: min(var(--content-max), calc(100% - var(--sidebar-w) - 56px));
   /* above .update-banner (z-index: 50): the console is something the user just opened on
      purpose, it should not be hidden behind an incidental update notice */
   z-index: 60;
   display: flex;
   flex-direction: column;
   height: 220px;
-  max-width: 920px;
-  margin: 0 28px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-bottom: none;
@@ -1615,8 +1622,12 @@ dialog[open] {
     width: min(340px, calc(100vw - 96px));
   }
 
+  :root {
+    --sidebar-w: 64px;
+  }
+
   .app {
-    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
   }
 
   .sidebar {
