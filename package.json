@@ -10,7 +10,7 @@
   "bugs": {
     "url": "https://github.com/rahulgurujala/coursegrab/issues"
   },
-  "description": "A cross platform (Windows, Mac, Linux) desktop application for downloading your enrolled Udemy courses. Based on Udeler by Faisal Umair.",
+  "description": "A cross platform (Windows, Mac, Linux) desktop application for downloading your enrolled Udemy courses. Based on Udeler.",
   "main": "dist/main/index.js",
   "scripts": {
     "start": "node scripts/dev.mjs",
@@ -72,12 +72,5 @@
     "jquery": "^3.5.0",
     "node-vtt-to-srt": "git+https://github.com/riazXrazor/vtt-to-srt.git",
     "sanitize-filename": "^1.6.1"
-  },
-  "contributors": [
-    {
-      "name": "Faisal Umair",
-      "email": "eff.umair@gmail.com",
-      "url": "https://github.com/FaisalUmair"
-    }
-  ]
+  }
 }
