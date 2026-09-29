@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/rahulgurujala/coursegrab/compare/v2.1.1...v2.2.0) (2026-09-29)
+
+
+### Features
+
+* check for updates on launch, with in-app update on Windows and Linux ([#26](https://github.com/rahulgurujala/coursegrab/issues/26)) ([035d3eb](https://github.com/rahulgurujala/coursegrab/commit/035d3eba6a3dd75c0b198ae1620f44b02e21b791))
+
 ## [2.1.1](https://github.com/rahulgurujala/coursegrab/compare/v2.1.0...v2.1.1) (2026-09-29)
 
 
