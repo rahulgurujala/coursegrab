@@ -1,10 +1,12 @@
 // Course download engine: reads a course from Udemy, decides what needs downloading
 // (new, updated or missing lectures only) and saves it to disk.
 //
-// Loaded after app.js, which provides: $, ui, settings, translate, headers, subDomain,
+// Loaded after app.js, which provides: $, ui, settings, translate, subDomain,
 // fs, homedir, sanitize, vtt2srt, https, Downloader, downloadControls, ensureDownloadRow.
+// Udemy API calls themselves live in src/api/udemy.ts (dist/api/udemy.js, required below).
 
 const path = require("path");
+const udemyApi = require("./dist/api/udemy.js");
 
 const MANIFEST_FILE = ".coursegrab.json";
 const SKIPPED_FILE = "Skipped lectures.txt";
@@ -104,35 +106,17 @@ async function checkCourse(course, onProgress) {
 }
 
 // ---------- helpers ----------
-// path.pathname only, no query string: Udemy's API calls carry no secrets in the query, but this
-// keeps the log short and free of noise either way.
-function logUrl(url) {
-  try {
-    return new URL(url).pathname;
-  } catch (e) {
-    return url;
-  }
-}
-
-function api(url, courseId) {
-  return new Promise(function(resolve, reject) {
-    var started = Date.now();
-    $.ajax({
-      type: "GET",
-      url: url,
-      headers: headers,
-      success: function(data) {
-        if (courseId) devlog.info(courseId, "GET " + logUrl(url) + " -> 200 (" + (Date.now() - started) + "ms)");
-        resolve(data);
-      },
-      error: function(xhr) {
-        if (courseId) devlog.error(courseId, "GET " + logUrl(url) + " -> " + xhr.status + " (" + (Date.now() - started) + "ms)");
-        var err = new Error("HTTP " + xhr.status);
-        err.status = xhr.status;
-        reject(err);
-      }
-    });
-  });
+// Every actual Udemy request lives in src/api/udemy.ts (typed, no side effects beyond the
+// network call itself), compiled to dist/api/udemy.js and require()'d the same way
+// assets/js/rangeDownloader.js already is. This just supplies the auth/logging context it needs.
+function apiContext() {
+  return {
+    subDomain: subDomain,
+    accessToken: settings.get("access_token"),
+    onLog: function(courseId, level, text) {
+      devlog[level](courseId, text);
+    }
+  };
 }
 
 async function pool(items, limit, worker) {
@@ -270,10 +254,7 @@ function skipLecture(data, chapter, lecture, reason) {
 }
 
 async function loadLecture(lecture, chapter, course, options, data) {
-  var response = await api(
-    `https://${subDomain}.udemy.com/api-2.0/users/me/subscribed-courses/${course.id}/lectures/${lecture.id}?fields[asset]=stream_urls,download_urls,captions,title,filename,data,body&fields[lecture]=asset,supplementary_assets`,
-    course.id
-  );
+  var response = await udemyApi.getLectureDetail(course.id, lecture.id, apiContext());
   var asset = response.asset || {};
 
   if (lecture.type == "Article") {
@@ -306,10 +287,7 @@ async function loadLecture(lecture, chapter, course, options, data) {
     lecture.supplementary = [];
     for (var b of response.supplementary_assets) {
       try {
-        var detail = await api(
-          `https://${subDomain}.udemy.com/api-2.0/users/me/subscribed-courses/${course.id}/lectures/${lecture.id}/supplementary-assets/${b.id}?fields[asset]=download_urls,external_url,asset_type`,
-          course.id
-        );
+        var detail = await udemyApi.getSupplementaryAssetDetail(course.id, lecture.id, b.id, apiContext());
         if (detail.download_urls) {
           var found = detail.download_urls[detail.asset_type];
           if (found && found[0]) {
@@ -334,10 +312,7 @@ async function loadLecture(lecture, chapter, course, options, data) {
 // "Skipped" entries so numbering matches the course, and are listed in data.skipped.
 async function prepareCourse(course, prep, onProgress, retryOnly) {
   var options = settings.getAll().download;
-  var curriculum = await api(
-    `https://${subDomain}.udemy.com/api-2.0/courses/${course.id}/cached-subscriber-curriculum-items?page_size=100000`,
-    course.id
-  );
+  var curriculum = await udemyApi.getCurriculum(course.id, apiContext());
   var items = curriculum.results || [];
   if (!items.length) {
     var empty = new Error("empty course");
@@ -544,10 +519,7 @@ async function retryLecture(courseId, lectureId) {
   var dir = store.dir || courseDir(store.title);
 
   try {
-    var curriculum = await api(
-      `https://${subDomain}.udemy.com/api-2.0/courses/${courseId}/cached-subscriber-curriculum-items?page_size=100000`,
-      courseId
-    );
+    var curriculum = await udemyApi.getCurriculum(courseId, apiContext());
     // walk the curriculum to find this lecture's chapter and its position within it
     var ci = -1;
     var chapterName = "";

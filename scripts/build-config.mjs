@@ -25,3 +25,21 @@ export const buildOptions = {
   sourcemap: true,
   logLevel: "info"
 };
+
+// The new src/ tree (TypeScript, real modules): compiled to CJS and require()'d from the plain-JS
+// renderer files, the same way assets/js/rangeDownloader.js already is, until those files
+// themselves move into src/ later in the rewrite. outbase mirrors src/'s own structure under
+// dist/ (src/api/udemy.ts -> dist/api/udemy.js), matching the target layout in the rewrite plan.
+export const srcEntries = ["src/api/udemy.ts"];
+
+export const srcBuildOptions = {
+  entryPoints: srcEntries,
+  outdir: "dist",
+  outbase: "src",
+  bundle: false,
+  platform: "node",
+  format: "cjs",
+  target: "esnext",
+  sourcemap: true,
+  logLevel: "info"
+};

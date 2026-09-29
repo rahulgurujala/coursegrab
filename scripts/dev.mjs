@@ -3,19 +3,19 @@
 import * as esbuild from "esbuild";
 import { spawn } from "node:child_process";
 import electronPath from "electron";
-import { buildOptions } from "./build-config.mjs";
+import { buildOptions, srcBuildOptions } from "./build-config.mjs";
 
-const ctx = await esbuild.context(buildOptions);
-await ctx.rebuild();
-await ctx.watch();
-console.log("[dev] esbuild watching assets/js -> dist/renderer");
+const [rendererCtx, srcCtx] = await Promise.all([esbuild.context(buildOptions), esbuild.context(srcBuildOptions)]);
+await Promise.all([rendererCtx.rebuild(), srcCtx.rebuild()]);
+await Promise.all([rendererCtx.watch(), srcCtx.watch()]);
+console.log("[dev] esbuild watching assets/js -> dist/renderer, src -> dist");
 
 // Extra flags (e.g. `bun start -- --remote-debugging-port=9222`) pass straight through to Electron.
 const extraArgs = process.argv.slice(2);
 const child = spawn(electronPath, [".", ...extraArgs], { stdio: "inherit", env: process.env });
 
 async function shutdown(code) {
-  await ctx.dispose();
+  await Promise.all([rendererCtx.dispose(), srcCtx.dispose()]);
   process.exit(code ?? 0);
 }
 

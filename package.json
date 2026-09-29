@@ -33,6 +33,7 @@
       "index.html",
       "index.js",
       "dist/renderer/**/*",
+      "dist/api/**/*",
       "assets/**/*",
       "!assets/js/ui.js",
       "!assets/js/devlog.js",
