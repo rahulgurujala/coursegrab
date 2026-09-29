@@ -54,5 +54,11 @@ jobs:
       - name: Syntax check
         run: |
           for f in index.js assets/js/*.js; do node --check "$f"; done
+      - name: Type check
+        run: bun run typecheck
+      - name: Unit tests
+        run: bun run test
+      - name: Build renderer
+        run: bun run build:renderer
       - name: Package smoke test
         run: bunx electron-builder --linux --dir --publish never

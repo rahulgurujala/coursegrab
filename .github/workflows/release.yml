@@ -53,6 +53,7 @@ jobs:
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
+      - run: bun run build:renderer
       - run: bunx electron-builder ${{ matrix.args }} --publish never
       - name: Attach installers to the release
         shell: bash
