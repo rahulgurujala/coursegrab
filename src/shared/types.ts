@@ -89,11 +89,12 @@ export interface Lecture {
   supplementary?: SupplementaryAsset[];
   reason?: SkipReason; // only set when type has been forced to "Skipped"
 
-  // Set by planUpdates() when deciding what needs downloading.
+  // Set by planUpdates() when deciding what needs downloading. status doubles as the change
+  // badge shown in the course details store (buildStore() reads lecture.status straight into
+  // LectureStoreEntry.badge); there is no separate badge field on the lecture itself.
   primary?: string; // the file's path relative to the course folder
   status?: ChangeBadge | "unchanged" | "outside";
   skip?: boolean;
-  badge?: ChangeBadge | null;
 
   // Set by prepareCourse() when retryOnly is true and the manifest already trusts this lecture:
   // planUpdates() then skips re-checking it against Udemy entirely.

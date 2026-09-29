@@ -3,90 +3,36 @@
 //
 // Loaded after app.js, which provides: $, ui, settings, translate, subDomain,
 // fs, homedir, sanitize, vtt2srt, https, Downloader, downloadControls, ensureDownloadRow.
-// Udemy API calls themselves live in src/api/udemy.ts (dist/api/udemy.js, required below).
+// Udemy API calls live in src/api/udemy.ts, course state in src/store/*.ts (both compiled to
+// dist/ and required below, the same way assets/js/rangeDownloader.js already is).
 
 const path = require("path");
 const udemyApi = require("./dist/api/udemy.js");
+const manifestStore = require("./dist/store/manifest.js");
+const courseStoreModule = require("./dist/store/courseStore.js");
 
-const MANIFEST_FILE = ".coursegrab.json";
 const SKIPPED_FILE = "Skipped lectures.txt";
 
-// What the course detail view shows: per course, every lecture and its state.
-//   state: queued | downloading | done | unchanged | skipped | failed | outside | saved
-//   badge: new | updated | missing (why a queued lecture will be downloaded)
-var courseStore = {};
+// courseStore is the SAME object courseStoreModule exports, not a copy: assets/js/details.js
+// still reads the global `courseStore` directly (courseStore[id], courseStore[id].byId[...]),
+// and will keep doing so unchanged until it is ported too.
+var courseStore = courseStoreModule.courseStore;
+var readManifest = manifestStore.readManifest;
+var writeManifest = manifestStore.writeManifest;
+var buildStore = courseStoreModule.buildStore;
+
+function storeFromManifest(courseId, title, dir) {
+  return courseStoreModule.storeFromManifest(courseId, title, dir, translate);
+}
 
 function touchStore(courseId, lectureId) {
+  courseStoreModule.touch(courseId, lectureId);
+}
+// The one place that decides what "touched" means: the course details view, same behavior as
+// before (courseDetail.touch), just wired through the store's event instead of called inline.
+courseStoreModule.storeEvents.on("touch", function(courseId, lectureId) {
   if (typeof courseDetail != "undefined") courseDetail.touch(courseId, lectureId);
-}
-
-// Builds the store from a prepared course and its plan.
-function buildStore(courseId, title, dir, data, phase, showBadges) {
-  var store = { id: courseId, title: title, dir: dir, phase: phase, chapters: [], byId: {}, note: "" };
-  data.chapters.forEach(function(chapter, ci) {
-    var group = { name: chapter.name, lectures: [] };
-    chapter.lectures.forEach(function(lecture, li) {
-      var entry = { id: lecture.id, num: li + 1, name: lecture.name, state: "queued", badge: null, reason: "", pct: 0, size: null, note: "" };
-      if (lecture.type == "Skipped") {
-        entry.state = "skipped";
-        entry.reason = lecture.reason;
-      } else if (lecture.status == "outside") {
-        entry.state = "outside";
-      } else if (lecture.skip) {
-        entry.state = "unchanged";
-      } else {
-        // "new" on a first download is just noise; badges matter when comparing with an earlier download
-        entry.badge = showBadges ? lecture.status || null : null;
-      }
-      group.lectures.push(entry);
-      store.byId[entry.id] = entry;
-    });
-    store.chapters.push(group);
-  });
-  courseStore[courseId] = store;
-  return store;
-}
-
-// After a restart there is no live data: rebuild what is saved from the course folder's record.
-function storeFromManifest(courseId, title, dir) {
-  var manifest = readManifest(dir);
-  var store = { id: courseId, title: title, dir: dir, phase: "saved", chapters: [], byId: {}, note: "" };
-  courseStore[courseId] = store;
-  if (!manifest) return store;
-  var groups = {};
-  Object.keys(manifest.lectures).forEach(function(id) {
-    var m = manifest.lectures[id];
-    var parts = (m.primary || "").split(path.sep);
-    var chapter = parts.length > 1 ? parts[0] : "";
-    var file = parts[parts.length - 1] || m.title;
-    var num = parseInt(file, 10) || 0;
-    var chapterNum = parseInt(chapter, 10) || 0;
-    var key = chapterNum + "|" + chapter;
-    groups[key] = groups[key] || { order: chapterNum, name: chapter.replace(/^\d+\.\s*/, "") || translate("Lectures"), lectures: [] };
-    var size = null;
-    try {
-      size = fs.statSync(path.join(dir, m.primary)).size;
-    } catch (e) {}
-    var entry = { id: id, num: num, name: m.title, state: "saved", badge: null, reason: "", pct: 100, size: size, note: m.quality ? (/^\d+$/.test(String(m.quality)) ? m.quality + "p" : String(m.quality)) : "" };
-    groups[key].lectures.push(entry);
-    store.byId[id] = entry;
-  });
-  Object.keys(groups)
-    .map(function(k) {
-      return groups[k];
-    })
-    .sort(function(a, b) {
-      return a.order - b.order;
-    })
-    .forEach(function(g) {
-      g.lectures.sort(function(a, b) {
-        return a.num - b.num;
-      });
-      store.chapters.push(g);
-    });
-  courseStore[courseId] = store;
-  return store;
-}
+});
 
 // Reads the course and compares it with what is saved, without downloading or changing any file.
 async function checkCourse(course, onProgress) {
@@ -178,24 +124,6 @@ function guessExtension(url) {
   var dot = last.lastIndexOf(".");
   var ext = dot == -1 ? "" : last.slice(dot + 1);
   return /^[A-Za-z0-9]{1,8}$/.test(ext) ? ext : "";
-}
-
-function readManifest(dir) {
-  try {
-    var manifest = JSON.parse(fs.readFileSync(path.join(dir, MANIFEST_FILE), "utf8"));
-    return manifest && manifest.lectures ? manifest : null;
-  } catch (e) {
-    return null;
-  }
-}
-
-function writeManifest(dir, manifest) {
-  try {
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, MANIFEST_FILE), JSON.stringify(manifest, null, 1));
-  } catch (e) {
-    // the manifest only speeds up later updates; never fail a download over it
-  }
 }
 
 function removeQuietly() {
