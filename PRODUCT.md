@@ -15,7 +15,7 @@ Udemy learners who want offline copies of courses they are already enrolled in: 
 CourseGrab logs the user into Udemy, lists the courses they are subscribed to, and downloads lecture videos, subtitles and attachments into an organised folder structure on disk. Success: the user finds a course fast, starts a download with the right options, trusts it is progressing, and ends with a complete, well-organised folder. Downloading the same course again fetches only what is new or changed.
 
 ## Positioning
-A free, ad-free, cross-platform desktop downloader with no accounts of its own. It only accesses courses the user is enrolled in, using their own Udemy authentication. Created and maintained by rahulgurujala; based on Udeler by Faisal Umair (FaisalUmair/udemy-downloader-gui, MIT, archived), renamed CourseGrab.
+A free, ad-free, cross-platform desktop downloader with no accounts of its own. It only accesses courses the user is enrolled in, using their own Udemy authentication. Created and maintained by rahulgurujala; based on Udeler (FaisalUmair/udemy-downloader-gui, MIT, archived), renamed CourseGrab.
 
 ## Operating Context
 - Sign-in methods: Udemy login window (credentials; the app watches for the access_token cookie) or an access token pasted by the user. Udemy Business users supply a company subdomain.
@@ -39,7 +39,7 @@ A free, ad-free, cross-platform desktop downloader with no accounts of its own. 
 
 ## Brand Commitments
 Visual direction (user-confirmed): clean, modern, professional, simple but full-featured. No themed or decorative worlds. Craft bar: Apple Music/Podcasts (macOS), Raycast/Arc, Notion/Vercel dashboard, Linear. Light and dark themes, both polished, following the OS setting.
-The name is CourseGrab. It is based on Udeler and keeps a small credit to Faisal Umair (README, About page, sign in footer, LICENSE) next to the maintainer's name, rahulgurujala. There is no donate section. The tone is a plain utility: free, no ads, no accounts. Copy and documentation avoid em dashes.
+The name is CourseGrab. It is based on Udeler and links back to the original repo (README, About page) without naming anyone, since the project has since changed substantially; the LICENSE file's copyright notice is the one place the original author's name stays, unconditionally (MIT requires it, that is not a UI credit choice). There is no donate section. The tone is a plain utility: free, no ads, no accounts. Copy and documentation avoid em dashes.
 
 ## Evidence on Hand
 No customer quotes, benchmarks or usage data. README screenshots in `docs/images/` use synthetic sample courses, never a real account.

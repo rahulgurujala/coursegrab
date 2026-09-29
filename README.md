@@ -348,4 +348,4 @@ CourseGrab is meant for saving courses that you are enrolled in, for your own pe
 
 Released under the [MIT License](LICENSE).
 
-Created and maintained by [rahulgurujala](https://github.com/rahulgurujala). Based on Udeler by [Faisal Umair](https://github.com/FaisalUmair/udemy-downloader-gui) and its contributors.
+Created and maintained by [rahulgurujala](https://github.com/rahulgurujala). Based on [Udeler](https://github.com/FaisalUmair/udemy-downloader-gui).
