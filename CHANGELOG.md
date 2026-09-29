@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.2.5](https://github.com/rahulgurujala/coursegrab/compare/v2.2.4...v2.2.5) (2026-09-29)
+
+
+### Refactoring
+
+* **phase 1:** toolchain skeleton for the foundation rewrite ([ef171ac](https://github.com/rahulgurujala/coursegrab/commit/ef171ac4017309abbca3e0c2a62be54d3384dbaa))
+* **phase 2:** name the real domain model in src/shared/types.ts ([c941207](https://github.com/rahulgurujala/coursegrab/commit/c94120742f6a3d306ac7e0be15df4d6123a6a7a8))
+* **phase 3:** extract every Udemy HTTP call into src/api/udemy.ts ([b2cd937](https://github.com/rahulgurujala/coursegrab/commit/b2cd93702e3e84dc4920fd1ab9dc951eb3bb15f5))
+* **phase 4:** extract courseStore and manifest into src/store/*.ts ([4f3fd42](https://github.com/rahulgurujala/coursegrab/commit/4f3fd42af6d8502d00518e6c13148726d15cecf4))
+* **phase 5a:** port rangeDownloader to TypeScript, add real tests ([4aa862f](https://github.com/rahulgurujala/coursegrab/commit/4aa862f9faa70845ac672de2e01bee1e703e980c))
+* **phase 5b:** extract naming, fs cleanup, and plan comparison into src/download/*.ts ([872859e](https://github.com/rahulgurujala/coursegrab/commit/872859e89fee45681a2e2b606ea82243cc47cece))
+* **phase 5c:** extract the download orchestrator, the real surgery ([88b87f4](https://github.com/rahulgurujala/coursegrab/commit/88b87f43afcec6acb3fa5255848b258fafd872b8))
+* **phase 6a:** extract the course row into src/view/courseRow.ts ([ddf765d](https://github.com/rahulgurujala/coursegrab/commit/ddf765d41ad29c6cd2580f6b602c55ff2f08a663))
+* **phase 6b:** extract the course details view and devlog into typed modules ([a15be0c](https://github.com/rahulgurujala/coursegrab/commit/a15be0c975a97c285da1908af19fbebc21705d4b))
+* **phase 6c:** extract the app shell into src/view/shell.ts ([74a77db](https://github.com/rahulgurujala/coursegrab/commit/74a77db69f676c4926c8144bac430e832d8a6c60))
+* **phase 6d:** convert app.js to src/app.ts, the last renderer file ([850cb7a](https://github.com/rahulgurujala/coursegrab/commit/850cb7ab2adc9964131c1fb857bfb7f45d6d2f97))
+* **phase 7-9:** split the main process into src/main/*, delete superseded files ([6f5ab5b](https://github.com/rahulgurujala/coursegrab/commit/6f5ab5b4341055111176d5507c0a338ae3bdd807))
+* TypeScript foundation rewrite ([b42537f](https://github.com/rahulgurujala/coursegrab/commit/b42537f6cdef80d66a385658283af5416657d6ee))
+
 ## [2.2.4](https://github.com/rahulgurujala/coursegrab/compare/v2.2.3...v2.2.4) (2026-09-29)
 
 
