@@ -104,14 +104,29 @@ async function checkCourse(course, onProgress) {
 }
 
 // ---------- helpers ----------
-function api(url) {
+// path.pathname only, no query string: Udemy's API calls carry no secrets in the query, but this
+// keeps the log short and free of noise either way.
+function logUrl(url) {
+  try {
+    return new URL(url).pathname;
+  } catch (e) {
+    return url;
+  }
+}
+
+function api(url, courseId) {
   return new Promise(function(resolve, reject) {
+    var started = Date.now();
     $.ajax({
       type: "GET",
       url: url,
       headers: headers,
-      success: resolve,
+      success: function(data) {
+        if (courseId) devlog.info(courseId, "GET " + logUrl(url) + " -> 200 (" + (Date.now() - started) + "ms)");
+        resolve(data);
+      },
       error: function(xhr) {
+        if (courseId) devlog.error(courseId, "GET " + logUrl(url) + " -> " + xhr.status + " (" + (Date.now() - started) + "ms)");
         var err = new Error("HTTP " + xhr.status);
         err.status = xhr.status;
         reject(err);
@@ -232,7 +247,8 @@ function skipLecture(data, chapter, lecture, reason) {
 
 async function loadLecture(lecture, chapter, course, options, data) {
   var response = await api(
-    `https://${subDomain}.udemy.com/api-2.0/users/me/subscribed-courses/${course.id}/lectures/${lecture.id}?fields[asset]=stream_urls,download_urls,captions,title,filename,data,body&fields[lecture]=asset,supplementary_assets`
+    `https://${subDomain}.udemy.com/api-2.0/users/me/subscribed-courses/${course.id}/lectures/${lecture.id}?fields[asset]=stream_urls,download_urls,captions,title,filename,data,body&fields[lecture]=asset,supplementary_assets`,
+    course.id
   );
   var asset = response.asset || {};
 
@@ -267,7 +283,8 @@ async function loadLecture(lecture, chapter, course, options, data) {
     for (var b of response.supplementary_assets) {
       try {
         var detail = await api(
-          `https://${subDomain}.udemy.com/api-2.0/users/me/subscribed-courses/${course.id}/lectures/${lecture.id}/supplementary-assets/${b.id}?fields[asset]=download_urls,external_url,asset_type`
+          `https://${subDomain}.udemy.com/api-2.0/users/me/subscribed-courses/${course.id}/lectures/${lecture.id}/supplementary-assets/${b.id}?fields[asset]=download_urls,external_url,asset_type`,
+          course.id
         );
         if (detail.download_urls) {
           var found = detail.download_urls[detail.asset_type];
@@ -294,7 +311,8 @@ async function loadLecture(lecture, chapter, course, options, data) {
 async function prepareCourse(course, prep, onProgress, retryOnly) {
   var options = settings.getAll().download;
   var curriculum = await api(
-    `https://${subDomain}.udemy.com/api-2.0/courses/${course.id}/cached-subscriber-curriculum-items?page_size=100000`
+    `https://${subDomain}.udemy.com/api-2.0/courses/${course.id}/cached-subscriber-curriculum-items?page_size=100000`,
+    course.id
   );
   var items = curriculum.results || [];
   if (!items.length) {
@@ -417,7 +435,7 @@ function planUpdates(data, dir, options, inScope, dryRun) {
         // the instructor replaced this video: fetch the new one
         lecture.status = "updated";
         var old = path.join(dir, entry.primary || primary);
-        if (!dryRun) removeQuietly(old, old + ".mtd", old.replace(/\.[^.]+$/, ".srt"), target, target + ".mtd");
+        if (!dryRun) removeQuietly(old, old + ".mtd", old + ".mtd.meta.json", old.replace(/\.[^.]+$/, ".srt"), target, target + ".mtd", target + ".mtd.meta.json");
       } else {
         // same content; follow a rename or reorder by moving the file instead of downloading again
         var oldPath = entry.primary ? path.join(dir, entry.primary) : target;
@@ -503,7 +521,8 @@ async function retryLecture(courseId, lectureId) {
 
   try {
     var curriculum = await api(
-      `https://${subDomain}.udemy.com/api-2.0/courses/${courseId}/cached-subscriber-curriculum-items?page_size=100000`
+      `https://${subDomain}.udemy.com/api-2.0/courses/${courseId}/cached-subscriber-curriculum-items?page_size=100000`,
+      courseId
     );
     // walk the curriculum to find this lecture's chapter and its position within it
     var ci = -1;
@@ -557,14 +576,20 @@ async function retryLecture(courseId, lectureId) {
     // a stale partial download resumes with the URL it was started with, not the one just
     // fetched above; this is a deliberate fresh retry, so start clean rather than risk resuming
     // against a URL that may no longer be valid
-    removeQuietly(target + ".mtd");
+    removeQuietly(target + ".mtd", target + ".mtd.meta.json");
 
     if (found.lecture.type == "Article" || found.lecture.type == "Url") {
       await fs.promises.writeFile(target, found.lecture.src);
     } else {
-      await retryOneFile(found.lecture.src, target, function(pct) {
-        setLecture({ pct: pct });
-      });
+      await retryOneFile(
+        found.lecture.src,
+        target,
+        function(pct) {
+          setLecture({ pct: pct });
+        },
+        courseId,
+        found.lecture.name
+      );
     }
 
     if (found.lecture.caption && !options.skipSubtitles) {
@@ -576,7 +601,7 @@ async function retryLecture(courseId, lectureId) {
         var asset = found.lecture.supplementary[ai];
         var file = path.join(folder, attachmentName(found.position - 1, ai, asset));
         if (asset.type == "Url" || asset.type == "Article") await fs.promises.writeFile(file, asset.src);
-        else await retryOneFile(asset.src, file, function() {});
+        else await retryOneFile(asset.src, file, function() {}, courseId, asset.name);
       }
     }
 
@@ -615,76 +640,32 @@ async function retryLecture(courseId, lectureId) {
 }
 
 // A small retrying single-file downloader, for retryLecture (no pause/resume, just retry on drop).
-function retryOneFile(url, dest, onProgress) {
+// rangeDownloader.js (see its own header comment) owns retrying each byte range internally and
+// only reports "end" once the file is actually, fully renamed to its final name, so there is no
+// separate stall watchdog here racing against it: what the promise settles with is always what is
+// really on disk.
+function retryOneFile(url, dest, onProgress, courseId, label) {
   var downloader = new Downloader();
   function attempt() {
     return new Promise(function(resolve, reject) {
       var dl = fs.existsSync(dest + ".mtd") ? downloader.resumeDownload(dest) : downloader.download(url, dest);
-      // status 2 ("error, retrying") is the library resuming just the one thread that hiccupped,
-      // not a restart of the whole file: with 5 parallel connections on a large lecture, one of
-      // them dropping briefly is normal. Setting this to 0 (as an earlier version of this file
-      // did) disabled that per-thread recovery, so any single-thread hiccup hard-failed the whole
-      // file and our own outer retry restarted it from scratch, i.e. exactly "100% then back to 0%
-      // then failed". A short retry interval keeps a truly dead connection from stalling long, the
-      // stall watchdog below is the backstop for that.
       dl.setRetryOptions({ maxRetries: 2, retryInterval: 1500 });
-      dl.setOptions({ threadsCount: 5 });
-      var notStarted = 0;
-      // give up only on no byte progress for a while, not a fixed clock: see the comment on the
-      // same watchdog in fetchFile, a large lecture can legitimately still be transferring
-      var lastBytes = 0;
-      var stalledSince = Date.now();
-      var timer = setInterval(function() {
-        if (dl.status == 0) {
-          // give up instead of polling forever if it never starts downloading at all
-          notStarted++;
-          if (notStarted >= 20) settle(httpError(0));
-          return;
-        }
-        if (dl.status == 1 || dl.status == -1) {
-          var stats = dl.getStats();
-          var bytes = stats.total.downloaded || 0;
-          if (bytes > lastBytes) {
-            lastBytes = bytes;
-            stalledSince = Date.now();
-          } else if (dl.status == 1 && Date.now() - stalledSince > 20000) {
-            try {
-              dl.stop();
-            } catch (e) {}
-            settle(httpError(0));
-            return;
-          }
-          onProgress(Math.round(stats.total.completed) || 0);
-        }
-        if (dl.status == -1) {
-          clearInterval(timer);
-          if (dl.stats.total.size == 0 && fs.existsSync(dl.filePath)) {
-            settle();
-            return;
-          }
-          $.ajax({
-            type: "HEAD",
-            url: dl.url,
-            error: function(xhr) {
-              if (xhr.status == 401 || xhr.status == 403) removeQuietly(dl.filePath);
-              settle(httpError(xhr.status));
-            },
-            success: function() {
-              settle(httpError(0));
-            }
-          });
-        }
-      }, 1000);
-      var settled = false;
-      function settle(err) {
-        if (settled) return;
-        settled = true;
-        clearInterval(timer);
-        err ? reject(err) : resolve();
-      }
-      dl.on("error", function() {});
+      dl.setOptions({ threadsCount: 5, timeout: 20000 });
+      dl.on("progress", function(stats) {
+        onProgress(Math.round(stats.total.completed) || 0);
+      });
+      dl.on("log", function(e) {
+        if (courseId) devlog[e.level == "warn" ? "warn" : "info"](courseId, (label ? label + ": " : "") + e.text);
+      });
       dl.on("end", function() {
-        settle();
+        if (courseId) devlog.info(courseId, (label ? label + ": " : "") + "done");
+        resolve();
+      });
+      dl.on("error", function() {
+        var status = (dl.error && dl.error.status) || 0;
+        if (courseId) devlog.error(courseId, (label ? label + ": " : "") + "failed (" + (status || "connection") + ")");
+        if (status == 401 || status == 403) removeQuietly(dl.filePath, dl.filePath + ".mtd", dl.filePath + ".mtd.meta.json");
+        reject(httpError(status));
       });
       dl.start();
     });
@@ -826,6 +807,10 @@ async function initDownload($course, data, subtitle = false) {
   }
 
   // Downloads one file. Partly downloaded files continue where they stopped and complete files are kept.
+  // rangeDownloader.js (see its header comment) retries each byte range on its own and only ever
+  // reports "end" once the file has actually been renamed to its final, complete name, so there is
+  // no separate watchdog here racing its own stop() against the download finishing anyway: what
+  // this promise settles with always matches what is really on disk.
   function fetchFile(url, dest) {
     return new Promise(function(resolve, reject) {
       var dl;
@@ -839,113 +824,38 @@ async function initDownload($course, data, subtitle = false) {
         dl = downloader.download(url, dest);
       }
 
-      var timer = null;
       var settled = false;
       function settle(err) {
         if (settled) return;
         settled = true;
-        clearInterval(timer);
         canPause = false;
         current = null;
         err ? reject(err) : resolve();
       }
       current = { dl: dl, abort: function() { settle(new Error("cancelled")); } };
-      // Some connection failures make the library retry forever internally, cycling through its own
-      // states without ever reaching a terminal one (observed directly against a dropped connection).
-      // Give up only when there has been no byte progress for a while, not on a fixed clock: a large
-      // lecture (real ones run to several hundred MB) can legitimately still be transferring well past
-      // any fixed ceiling, and a first version of this watchdog wrongly killed those.
-      var lastBytes = 0;
-      var stalledSince = Date.now();
-
-      // status 2 ("error, retrying") is the library resuming just the one thread that hiccupped,
-      // not a restart of the whole file: with 5 parallel connections on a large lecture, one of
-      // them dropping briefly is normal. Setting this to 0 (as an earlier version of this file
-      // did) disabled that per-thread recovery, so any single-thread hiccup hard-failed the whole
-      // file and our own outer retry restarted it from scratch, i.e. exactly "100% then back to 0%
-      // then failed". A short retry interval keeps a truly dead connection from stalling long, the
-      // stall watchdog below is the backstop for that.
       dl.setRetryOptions({ maxRetries: 2, retryInterval: 1500 });
-      dl.setOptions({ threadsCount: 5 });
-      dl.on("error", function() {
-        // handled through the status checks below
-      });
+      dl.setOptions({ threadsCount: 5, timeout: 20000 });
       dl.on("start", function() {
         canPause = true;
+      });
+      dl.on("progress", function(stats) {
+        view.speed = parseInt(stats.present.speed / 1000) || 0;
+        view.filePct = Math.round(stats.total.completed) || 0;
+        paint();
+      });
+      dl.on("log", function(e) {
+        devlog[e.level == "warn" ? "warn" : "info"](courseId, view.name + ": " + e.text);
       });
       dl.on("end", function() {
         settle();
       });
+      dl.on("error", function() {
+        var status = (dl.error && dl.error.status) || 0;
+        devlog.error(courseId, view.name + ": failed (" + (status || "connection") + ")");
+        if (status == 401 || status == 403) removeQuietly(dl.filePath, dl.filePath + ".mtd", dl.filePath + ".mtd.meta.json");
+        settle(httpError(status));
+      });
       dl.start();
-
-      var notStarted = 0;
-      var restarted = 0;
-      timer = setInterval(function() {
-        switch (dl.status) {
-          case 0:
-            // if it never starts, kick it a couple of times; if it still never starts, give up
-            // instead of polling forever (this used to be unbounded and could hang indefinitely)
-            notStarted++;
-            if (notStarted >= 8) {
-              notStarted = 0;
-              if (restarted < 2) {
-                restarted++;
-                dl.start();
-              } else {
-                clearInterval(timer);
-                settle(httpError(0));
-                break;
-              }
-            }
-            view.speed = 0;
-            paint();
-            break;
-          case 1:
-            var running = dl.getStats();
-            var runningBytes = running.total.downloaded || 0;
-            if (runningBytes > lastBytes) {
-              lastBytes = runningBytes;
-              stalledSince = Date.now();
-            } else if (Date.now() - stalledSince > 20000) {
-              try {
-                dl.stop();
-              } catch (e) {}
-              settle(httpError(0));
-              break;
-            }
-            view.speed = parseInt(running.present.speed / 1000) || 0;
-            view.filePct = Math.round(running.total.completed) || 0;
-            paint();
-            break;
-          case 2:
-            break;
-          case -1:
-            var failed = dl.getStats();
-            view.speed = parseInt(failed.present.speed / 1000) || 0;
-            view.filePct = Math.round(failed.total.completed) || 0;
-            paint();
-            if (dl.stats.total.size == 0 && fs.existsSync(dl.filePath)) {
-              dl.emit("end");
-              break;
-            }
-            clearInterval(timer);
-            $.ajax({
-              type: "HEAD",
-              url: dl.url,
-              error: function(xhr) {
-                if (xhr.status == 401 || xhr.status == 403) removeQuietly(dl.filePath);
-                settle(httpError(xhr.status));
-              },
-              success: function() {
-                settle(httpError(0));
-              }
-            });
-            break;
-          default:
-            view.speed = 0;
-            paint();
-        }
-      }, 1000);
     });
   }
 
@@ -957,6 +867,7 @@ async function initDownload($course, data, subtitle = false) {
       } catch (err) {
         var denied = err.status == 401 || err.status == 403;
         if (cancelled || denied || attempt >= 2) throw err;
+        devlog.warn(courseId, view.name + ": lecture-level retry " + attempt + " after " + (err.status || "connection error"));
         ui.Row.text(rows(), translate("Connection lost, trying again") + "…");
         await new Promise(function(resolve) {
           setTimeout(resolve, 1500 * attempt);
