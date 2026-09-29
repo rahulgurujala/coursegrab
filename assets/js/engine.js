@@ -159,17 +159,41 @@ function courseDir(title) {
   return path.join(downloadRoot(), sanitize(title));
 }
 
+// A single path segment must stay well under the filesystem's NAME_MAX (255 bytes on every
+// platform this app targets). This is also the backstop against a malformed URL ever producing
+// a name the OS refuses to open (see guessExtension's comment for a real case of exactly that).
+function capName(name, maxLen) {
+  maxLen = maxLen || 150;
+  if (name.length <= maxLen) return name;
+  var dot = name.lastIndexOf(".");
+  var ext = dot > -1 && name.length - dot <= 12 ? name.slice(dot) : "";
+  return name.slice(0, maxLen - ext.length) + ext;
+}
+
 function chapterFolder(chapterIndex, chapter) {
-  return sanitize(chapterIndex + 1 + ". " + chapter.name);
+  return capName(sanitize(chapterIndex + 1 + ". " + chapter.name));
 }
 
 // Same file names as earlier versions, so folders from older downloads are recognised.
 function primaryName(lectureIndex, lecture) {
   var base = lectureIndex + 1 + ". " + lecture.name.trim();
   if (lecture.type == "Article" || lecture.type == "Url") {
-    return sanitize(base + ".html");
+    return capName(sanitize(base + ".html"));
   }
-  return sanitize(base + "." + (lecture.type == "File" ? "pdf" : "mp4"));
+  return capName(sanitize(base + "." + (lecture.type == "File" ? "pdf" : "mp4")));
+}
+
+// Best-effort file extension from a download URL. Some of Udemy's supplementary-asset URLs are
+// missing the "?" that should separate the path from the query string: a real failure had
+// "Expires=...&Signature=..." glued directly onto the filename with no "?" at all, which broke
+// the previous "everything after the last dot" guess and produced an ENAMETOOLONG-length name.
+// Split on either separator, and only trust a result that actually looks like an extension.
+function guessExtension(url) {
+  var path = (url || "").split(/[?&]/)[0];
+  var last = path.split("/").pop() || "";
+  var dot = last.lastIndexOf(".");
+  var ext = dot == -1 ? "" : last.slice(dot + 1);
+  return /^[A-Za-z0-9]{1,8}$/.test(ext) ? ext : "";
 }
 
 function readManifest(dir) {
@@ -496,10 +520,10 @@ function fetchSubtitle(url, dir, lectureIndex, lecture) {
 
 function attachmentName(lectureIndex, index, asset) {
   var base = lectureIndex + 1 + "." + (index + 1) + " " + asset.name.trim();
-  if (asset.type == "Url" || asset.type == "Article") return sanitize(base + ".html");
-  var sourceExt = asset.src.split("/").pop().split(".").pop().split("?").shift();
-  var nameExt = asset.name.split(".").pop();
-  return sanitize(base + (nameExt == sourceExt ? "" : "." + sourceExt));
+  if (asset.type == "Url" || asset.type == "Article") return capName(sanitize(base + ".html"));
+  var nameExt = asset.name.indexOf(".") > -1 ? asset.name.split(".").pop() : "";
+  var ext = guessExtension(asset.src) || nameExt || "bin";
+  return capName(sanitize(base + (nameExt == ext ? "" : "." + ext)));
 }
 
 // Downloads exactly one lecture, independent of any running course-level download.
