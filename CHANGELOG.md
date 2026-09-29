@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.3](https://github.com/rahulgurujala/coursegrab/compare/v2.2.2...v2.2.3) (2026-09-29)
+
+
+### Bug Fixes
+
+* attachment downloads failing with ENAMETOOLONG, content still capped too narrow ([#35](https://github.com/rahulgurujala/coursegrab/issues/35)) ([a585400](https://github.com/rahulgurujala/coursegrab/commit/a585400af72ad6257c77e0d91d1ea3a4b87348f8))
+* guessExtension() now splits on either "?" or "&" and only trusts a short, alphanumeric result as a real extension, falling back to the asset's own name or a generic extension otherwise. Verified directly against the exact broken URL from the bug report (produces "1.1 Section 1 - Intro.pdf" instead of a 300-character name) and against normal well-formed URLs (unaffected). Also added a hard length cap (capName()) on every generated file and folder segment as a backstop, so this class of bug can never produce an unopenable path again regardless of what a URL looks like. ([a585400](https://github.com/rahulgurujala/coursegrab/commit/a585400af72ad6257c77e0d91d1ea3a4b87348f8))
+
 ## [2.2.2](https://github.com/rahulgurujala/coursegrab/compare/v2.2.1...v2.2.2) (2026-09-29)
 
 
