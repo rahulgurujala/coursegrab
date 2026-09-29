@@ -15,8 +15,14 @@ const naming = require("./dist/download/naming.js");
 const fsUtils = require("./dist/download/fsUtils.js");
 const planner = require("./dist/download/planner.js");
 const orchestratorModule = require("./dist/download/orchestrator.js");
+const devlogModule = require("./dist/shared/devlog.js");
 
 const SKIPPED_FILE = "Skipped lectures.txt";
+
+// Same devlog[level](courseId, text) shape every existing call site already uses; sourced from
+// the real module now (src/shared/devlog.ts) instead of the old global script, so this is the
+// same ring buffer view/courseDetails.ts reads from once details.js is wired to it too.
+var devlog = { info: devlogModule.info, warn: devlogModule.warn, error: devlogModule.error };
 
 // courseStore is the SAME object courseStoreModule exports, not a copy: assets/js/details.js
 // still reads the global `courseStore` directly (courseStore[id], courseStore[id].byId[...]),
