@@ -7,8 +7,34 @@ var courseDetail = (function() {
   var timer = null;
   var pending = {};
   var checking = false;
+  var consoleOpen = false;
 
   var FILTERS = ["all", "active", "changes", "skipped", "failed"];
+
+  function levelIcon(level) {
+    return level == "error" ? "✕" : level == "warn" ? "!" : "›";
+  }
+
+  function consoleRowHtml(e) {
+    var time = new Date(e.at).toLocaleTimeString([], { hour12: false });
+    return '<div class="console-row lvl-' + e.level + '"><span class="ct">' + time + "</span><span class=\"ci\">" + levelIcon(e.level) + '</span><span class="cx">' + esc(e.text) + "</span></div>";
+  }
+
+  function renderConsole() {
+    if (!consoleOpen || !openId) return;
+    var entries = devlog.forCourse(openId);
+    $("#console-count").text(entries.length);
+    var $body = $("#console-body");
+    var atBottom = $body[0] ? $body[0].scrollTop + $body[0].clientHeight >= $body[0].scrollHeight - 20 : true;
+    $body.html(entries.map(consoleRowHtml).join("") || '<div class="console-empty">' + esc(translate("Nothing logged yet for this course.")) + "</div>");
+    if (atBottom) $body.scrollTop($body[0].scrollHeight);
+  }
+
+  function setConsole(open) {
+    consoleOpen = open;
+    $("#course-console").prop("hidden", !open);
+    if (open) renderConsole();
+  }
 
   function store() {
     return courseStore[openId];
@@ -116,20 +142,24 @@ var courseDetail = (function() {
     var btn = function(act, label, cls) {
       return '<button class="btn ' + (cls || "") + '" type="button" data-act="' + act + '">' + label + "</button>";
     };
-    if (state == "downloading") html = btn("pause", translate("Pause")) + btn("cancel", translate("Cancel"), "ghost");
-    else if (state == "paused") html = btn("resume", translate("Resume"), "primary") + btn("cancel", translate("Cancel"), "ghost");
-    else if (state == "preparing") html = btn("cancel", translate("Cancel"), "ghost");
+    // Open folder and the debug console are useful in every state, including mid-download, not
+    // just once a course is idle: that is exactly when "what is actually happening right now" matters.
+    var common = btn("folder", translate("Open folder")) + btn("console", translate("Console"));
+    if (state == "downloading") html = common + btn("pause", translate("Pause")) + btn("cancel", translate("Cancel"), "ghost");
+    else if (state == "paused") html = common + btn("resume", translate("Resume"), "primary") + btn("cancel", translate("Cancel"), "ghost");
+    else if (state == "preparing") html = common + btn("cancel", translate("Cancel"), "ghost");
     else {
       var st = store();
       var changes = st && st.phase == "checked" ? counts().changes : 0;
       var label = state == "interrupted" ? translate("Resume") : state == "error" ? translate("Retry") : state == "idle" ? translate("Download") : changes ? translate("Download changes") : translate("Get updates");
       html =
-        btn("folder", translate("Open folder")) +
+        common +
         btn("check", checking ? '<span class="spinner"></span>' + translate("Checking") + "…" : translate("Check for changes")) +
         btn("go", label, "primary");
     }
     $("#course-actions").html(html);
     $("#course-actions [data-act=check]").prop("disabled", checking);
+    $("#course-actions [data-act=console]").attr("aria-pressed", String(consoleOpen)).toggleClass("active", consoleOpen);
   }
 
   function renderSummary() {
@@ -254,8 +284,51 @@ var courseDetail = (function() {
       var dir = store() && store().dir;
       if (dir && fs.existsSync(dir)) shell.openPath(dir);
       else ui.toast(translate("Folder not found"), true);
+    } else if (act == "console") {
+      setConsole(!consoleOpen);
+      renderActions();
     }
   });
+
+  $(document).on("click", "#console-close", function() {
+    setConsole(false);
+    renderActions();
+  });
+
+  $(document).on("click", "#console-clear", function() {
+    if (openId) devlog.clear(openId);
+    renderConsole();
+  });
+
+  $(document).on("devlog:add", function(e, entry) {
+    if (consoleOpen && entry.courseId == openId) renderConsole();
+  });
+
+  (function() {
+    var savedHeight = parseInt(localStorage.getItem("cg-console-height"), 10);
+    if (savedHeight) $("#course-console").css("height", Math.min(600, Math.max(120, savedHeight)) + "px");
+    var dragging = false;
+    var startY = 0;
+    var startHeight = 0;
+    $(document).on("mousedown", "#console-handle", function(e) {
+      dragging = true;
+      startY = e.clientY;
+      startHeight = $("#course-console").height();
+      $("body").css("user-select", "none");
+      e.preventDefault();
+    });
+    $(document).on("mousemove", function(e) {
+      if (!dragging) return;
+      var h = Math.min(600, Math.max(120, startHeight - (e.clientY - startY)));
+      $("#course-console").css("height", h + "px");
+    });
+    $(document).on("mouseup", function() {
+      if (!dragging) return;
+      dragging = false;
+      $("body").css("user-select", "");
+      localStorage.setItem("cg-console-height", $("#course-console").height());
+    });
+  })();
 
   $(document).on("click", "#course-filters [data-filter]", function() {
     filter = $(this).attr("data-filter");
@@ -272,6 +345,7 @@ var courseDetail = (function() {
       var $row = $('#downloads-list .course[course-id="' + id + '"]');
       openId = String(id);
       filter = "all";
+      setConsole(false);
       if (!courseStore[openId]) {
         var dir = $row.attr("data-path") || courseDir($row.find(".coursename").text());
         storeFromManifest(openId, $row.find(".coursename").text(), dir);

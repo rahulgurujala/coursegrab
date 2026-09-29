@@ -6,7 +6,10 @@ const fs = require("fs");
 const homedir = require("os").homedir();
 const sanitize = require("sanitize-filename");
 const vtt2srt = require("node-vtt-to-srt");
-var Downloader = require("mt-files-downloader");
+// Our own multi-connection downloader (assets/js/rangeDownloader.js), not mt-files-downloader:
+// that library could report a lecture as failed *after* it had already finished writing the
+// complete file to disk in the background (see the comment at the top of rangeDownloader.js).
+var Downloader = require("./assets/js/rangeDownloader.js");
 var shell = electron.shell;
 var https = require("https");
 
