@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.4](https://github.com/rahulgurujala/coursegrab/compare/v2.2.3...v2.2.4) (2026-09-29)
+
+
+### Bug Fixes
+
+* video downloads failing with ERR_INVALID_URL on protocol-relative URLs ([#38](https://github.com/rahulgurujala/coursegrab/issues/38)) ([4507ba6](https://github.com/rahulgurujala/coursegrab/commit/4507ba63d02ed4c305cc2d7abbb7b190afc7f876))
+
 ## [2.2.3](https://github.com/rahulgurujala/coursegrab/compare/v2.2.2...v2.2.3) (2026-09-29)
 
 
