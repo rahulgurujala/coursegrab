@@ -11,6 +11,7 @@
     "url": "https://github.com/rahulgurujala/coursegrab/issues"
   },
   "description": "A cross platform (Windows, Mac, Linux) desktop application for downloading your enrolled Udemy courses. Based on Udeler by Faisal Umair.",
+  "main": "dist/main/index.js",
   "scripts": {
     "start": "node scripts/dev.mjs",
     "postinstall": "electron-builder install-app-deps",
@@ -31,12 +32,9 @@
     },
     "files": [
       "index.html",
-      "index.js",
       "dist/**/*",
       "assets/**/*",
       "!assets/js/ui.js",
-      "!assets/js/devlog.js",
-      "!assets/js/app.js",
       "!assets/js/engine.js",
       "!assets/js/details.js",
       "!assets/js/updater.js",

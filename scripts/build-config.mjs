@@ -8,7 +8,6 @@
 // modules (later phases of the rewrite), this flips to bundle: true per entry group.
 export const RENDERER_ENTRIES = [
   "assets/js/ui.js",
-  "assets/js/app.js",
   "assets/js/engine.js",
   "assets/js/details.js",
   "assets/js/updater.js"
@@ -39,10 +38,17 @@ export const srcEntries = [
   "src/download/planner.ts",
   "src/download/orchestrator.ts",
   "src/shared/devlog.ts",
+  "src/shared/downloadControls.ts",
+  "src/shared/session.ts",
   "src/view/esc.ts",
   "src/view/courseRow.ts",
   "src/view/courseDetails.ts",
-  "src/view/shell.ts"
+  "src/view/shell.ts",
+  "src/app.ts",
+  "src/main/quitState.ts",
+  "src/main/window.ts",
+  "src/main/updater.ts",
+  "src/main/index.ts"
 ];
 
 export const srcBuildOptions = {
