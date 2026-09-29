@@ -53,12 +53,15 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Syntax check
         run: |
-          for f in index.js assets/js/*.js; do node --check "$f"; done
+          for f in assets/js/*.js; do node --check "$f"; done
       - name: Type check
         run: bun run typecheck
       - name: Unit tests
         run: bun run test
       - name: Build renderer
         run: bun run build:renderer
+      - name: Syntax check compiled output
+        run: |
+          for f in $(find dist -name "*.js"); do node --check "$f"; done
       - name: Package smoke test
         run: bunx electron-builder --linux --dir --publish never
