@@ -882,6 +882,8 @@ function autoEnrollViaWindow(
                 '[data-purpose*="start-course"]',
                 '[data-purpose*="start-learning"]',
                 '[data-purpose*="subscription"]',
+                'button[data-purpose*="checkout"]',
+                'button[data-purpose*="submit"]',
                 'button[data-purpose*="buy-this-course-button"]'
               ];
               for (const sel of selectors) {
@@ -899,8 +901,10 @@ function autoEnrollViaWindow(
                   t === 'start course' ||
                   t === 'start learning' ||
                   t === 'go to course' ||
+                  t === 'complete checkout' ||
                   t.includes('start course') ||
-                  t.includes('enroll now')
+                  t.includes('enroll now') ||
+                  t.includes('complete checkout')
                 ) {
                   el.click();
                   return true;
@@ -1008,7 +1012,7 @@ $("#app").on("click", ".download-btn, .retry-btn, .update-btn", async function(e
   if (!enrolled) {
     delete downloadControls[courseid];
     ui.Row.state($all, "error");
-    ui.Row.text($all, translate("Could not enroll in course. Make sure it is included in your plan."));
+    ui.Row.text($all, translate("Course not enrolled. Requires purchase or an active Personal Plan subscription."));
     return;
   }
   $all.find(".badge-new").remove();
