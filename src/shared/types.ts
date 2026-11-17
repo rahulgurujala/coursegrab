@@ -84,6 +84,18 @@ export interface UdemyCourseListResponse {
   results: UdemyCourseListItem[];
 }
 
+// What Udemy's /subscription-course-enrollments endpoint returns: each item wraps the
+// course inside a `course` property (unlike /subscribed-courses which is flat).
+export interface UdemySubscriptionEnrollmentItem {
+  course: UdemyCourseListItem;
+}
+
+export interface UdemySubscriptionEnrollmentResponse {
+  count: number;
+  next: string | null;
+  results: UdemySubscriptionEnrollmentItem[];
+}
+
 // ---------- curriculum / lectures ----------
 
 export type LectureType = "Video" | "Article" | "File" | "Url" | "Skipped";

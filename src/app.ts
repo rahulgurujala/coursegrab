@@ -18,7 +18,7 @@ import * as remote from "@electron/remote";
 import { downloadControls } from "./shared/downloadControls";
 import { session } from "./shared/session";
 import { ensureDownloadRow } from "./view/courseRow";
-import type { DownloadedCourseRecord, PrepareCourseData, UdemyCourseListItem, UdemyCourseListResponse } from "./shared/types";
+import type { DownloadedCourseRecord, PrepareCourseData, UdemyCourseListItem, UdemyCourseListResponse, UdemySubscriptionEnrollmentResponse } from "./shared/types";
 
 // fs and homedir are NOT imported here: they are true classic-script globals from index.html's
 // inline bootstrap script (see the comment there), and importing them again would compile to a
@@ -246,14 +246,93 @@ function checkLogin(): void {
 }
 
 // ---------- courses ----------
+
+// Normalise any course item whether returned directly or wrapped in `{ course: ... }`.
+function normalizeCourseItem(item: any): UdemyCourseListItem | null {
+  if (!item) return null;
+  const course = item.course && typeof item.course === "object" ? item.course : item;
+  if (course && course.id != null && course.title) {
+    return {
+      id: course.id,
+      title: course.title,
+      url: course.url || "",
+      image_240x135: course.image_240x135 || course.image_480x270 || course.image_125_H || ""
+    };
+  }
+  return null;
+}
+
+interface FetchedCourses {
+  items: UdemyCourseListItem[];
+  next: string | null;
+  authError: boolean;
+}
+
+function fetchCoursesEndpoint(url: string, hdrs: Record<string, string>): Promise<FetchedCourses> {
+  return new Promise((resolve) => {
+    $.ajax({
+      type: "GET",
+      url,
+      headers: hdrs,
+      success: (response: any) => {
+        const rawResults = response && Array.isArray(response.results) ? response.results : [];
+        const items: UdemyCourseListItem[] = [];
+        for (const r of rawResults) {
+          const c = normalizeCourseItem(r);
+          if (c) items.push(c);
+        }
+        resolve({ items, next: response?.next || null, authError: false });
+      },
+      error: (xhr) => {
+        const isAuthError = xhr.status === 401 || xhr.status === 403;
+        resolve({ items: [], next: null, authError: isAuthError });
+      }
+    });
+  });
+}
+
+function mergeAndRenderCourses(
+  purchased: FetchedCourses,
+  subscription: FetchedCourses
+): void {
+  if (purchased.authError && subscription.authError) {
+    settings.set("access_token", false);
+    resetToLogin(translate("Your session expired. Sign in again."));
+    return;
+  }
+
+  const seenIds = new Set<string>();
+  const merged: UdemyCourseListItem[] = [];
+
+  for (const c of [...purchased.items, ...subscription.items]) {
+    const idStr = String(c.id);
+    if (!seenIds.has(idStr)) {
+      seenIds.add(idStr);
+      merged.push(c);
+    }
+  }
+
+  $("#courses-list").empty();
+  addCourses(merged);
+  $("#courses-empty").prop("hidden", !!merged.length);
+  $("#load-more")
+    .prop("hidden", !purchased.next)
+    .data("url", purchased.next || "");
+}
+
+// Fetch both "subscribed-courses" (purchased/free) and "subscription-course-enrollments"
+// (Personal Plan) in parallel and merge them safely with deduplication.
 function loadCourses(): void {
-  $.ajax({
-    type: "GET",
-    url: `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscribed-courses?page_size=50`,
-    beforeSend: showSkeleton,
-    headers,
-    success: (response: UdemyCourseListResponse) => handleResponse(response),
-    error: courseListError
+  showSkeleton();
+
+  const purchasedUrl = `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscribed-courses?page_size=100&ordering=-last_accessed`;
+  const subscriptionUrl = `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscription-course-enrollments?page_size=100&ordering=-last_accessed`;
+
+  Promise.all([
+    fetchCoursesEndpoint(purchasedUrl, headers),
+    fetchCoursesEndpoint(subscriptionUrl, headers)
+  ]).then(([purchased, subscription]) => {
+    mergeAndRenderCourses(purchased, subscription);
   });
 }
 
@@ -339,13 +418,17 @@ function noCourses(): void {
 }
 
 function search(keyword: string, hdrs: Record<string, string>): void {
-  $.ajax({
-    type: "GET",
-    url: `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscribed-courses?page_size=50&page=1&fields[user]=job_title&search=${encodeURIComponent(keyword)}`,
-    beforeSend: showSkeleton,
-    headers: hdrs,
-    success: (response: UdemyCourseListResponse) => handleResponse(response),
-    error: courseListError
+  showSkeleton();
+
+  const encoded = encodeURIComponent(keyword);
+  const purchasedUrl = `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscribed-courses?page_size=100&page=1&search=${encoded}`;
+  const subscriptionUrl = `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscription-course-enrollments?page_size=100&page=1&search=${encoded}`;
+
+  Promise.all([
+    fetchCoursesEndpoint(purchasedUrl, hdrs),
+    fetchCoursesEndpoint(subscriptionUrl, hdrs)
+  ]).then(([purchased, subscription]) => {
+    mergeAndRenderCourses(purchased, subscription);
   });
 }
 
@@ -367,8 +450,8 @@ $("#search-form").on("submit", (e) => {
     return;
   }
   if (validURL(keyword)) {
-    if (keyword.search(new RegExp("^(http|https)"))) {
-      keyword = "http://" + keyword;
+    if (!/^https?:\/\//i.test(keyword)) {
+      keyword = "https://" + keyword;
     }
     $.ajax({
       type: "GET",
@@ -376,14 +459,31 @@ $("#search-form").on("submit", (e) => {
       beforeSend: showSkeleton,
       headers,
       success: (response: string) => {
-        const title = $(".main-content h1.clp-lead__title", response).text().trim();
+        const titleMatch = typeof response === "string" ? response.match(/<title>([^<]+)<\/title>/i) : null;
+        let title = (titleMatch && titleMatch[1]) ? titleMatch[1].replace(/\s*\|\s*Udemy\s*$/i, "").trim() : "";
+        if (!title) {
+          const slugMatch = keyword.match(/\/course\/([^/?#]+)/i);
+          if (slugMatch && slugMatch[1]) {
+            title = decodeURIComponent(slugMatch[1]).replace(/[-_]+/g, " ");
+          }
+        }
         if (title) {
+          $("#search-input").val(title);
           search(title, headers);
         } else {
           noCourses();
         }
       },
-      error: noCourses
+      error: () => {
+        const slugMatch = keyword.match(/\/course\/([^/?#]+)/i);
+        if (slugMatch && slugMatch[1]) {
+          const title = decodeURIComponent(slugMatch[1]).replace(/[-_]+/g, " ");
+          $("#search-input").val(title);
+          search(title, headers);
+        } else {
+          noCourses();
+        }
+      }
     });
   } else {
     search(keyword, headers);
