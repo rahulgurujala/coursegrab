@@ -25,12 +25,21 @@ export type RowState = "idle" | "preparing" | "downloading" | "paused" | "interr
 type Translate = (text: string) => string;
 
 export function courseRowHtml(c: CourseSummary, state: RowState | undefined, translate: Translate): string {
+  const sizeBadge = c.estimated_size
+    ? `<span class="size-est" title="${esc(translate("Estimated disk space"))}">${c.content_info ? esc(c.content_info) + " · " : ""}${esc(translate("Est.")) + " " + esc(c.estimated_size)}</span>`
+    : c.content_info
+      ? `<span class="size-est">${esc(c.content_info)}</span>`
+      : "";
+
   return `
 <li class="course" data-state="${state || "idle"}" course-id="${esc(c.id)}" course-url="${esc(c.url)}">
   <img class="thumb" src="${esc(c.image)}" alt="" loading="lazy">
   <div class="course-body">
     <h3 class="coursename">${esc(c.title)}</h3>
-    <p class="status-line" data-show="idle preparing downloading paused interrupted done error"><span class="status-text"></span></p>
+    <p class="status-line" data-show="idle preparing downloading paused interrupted done error">
+      <span class="status-text"></span>
+      ${sizeBadge}
+    </p>
     <div class="meter" data-show="preparing downloading paused interrupted" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="${esc(c.title)}">
       <span class="meter-track"><span class="meter-fill"></span></span><span class="meter-pct">0%</span>
     </div>

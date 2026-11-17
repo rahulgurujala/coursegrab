@@ -247,6 +247,49 @@ function checkLogin(): void {
 
 // ---------- courses ----------
 
+function formatBytes(bytes: number): string {
+  if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + " GB";
+  if (bytes >= 1048576) return (bytes / 1048576).toFixed(0) + " MB";
+  return Math.max(1, Math.round(bytes / 1024)) + " KB";
+}
+
+// Estimate the disk space that a course will take based on duration or lecture count.
+// Udemy's standard 720p/Auto video bitrate averages ~500 MB per video hour.
+function estimateCourseSize(course: UdemyCourseListItem): string {
+  let hours = 0;
+
+  if (course.content_info) {
+    const match = course.content_info.match(/(\d+(?:\.\d+)?)\s*(?:total\s*)?(hour|hr|min|m)/i);
+    if (match && match[1]) {
+      const val = parseFloat(match[1]);
+      const unit = (match[2] || "").toLowerCase();
+      if (unit.startsWith("h")) {
+        hours = val;
+      } else if (unit.startsWith("m")) {
+        hours = val / 60;
+      }
+    }
+  }
+
+  if (!hours && typeof course.estimated_content_length === "number" && course.estimated_content_length > 0) {
+    hours = course.estimated_content_length > 1000
+      ? course.estimated_content_length / 3600
+      : course.estimated_content_length / 60;
+  }
+
+  if (hours > 0) {
+    const bytes = hours * 500 * 1024 * 1024;
+    return "~" + formatBytes(bytes);
+  }
+
+  if (typeof course.num_published_lectures === "number" && course.num_published_lectures > 0) {
+    const bytes = course.num_published_lectures * 50 * 1024 * 1024;
+    return "~" + formatBytes(bytes);
+  }
+
+  return "";
+}
+
 // Normalise any course item whether returned directly or wrapped in `{ course: ... }`.
 function normalizeCourseItem(item: any): UdemyCourseListItem | null {
   if (!item) return null;
@@ -256,7 +299,10 @@ function normalizeCourseItem(item: any): UdemyCourseListItem | null {
       id: course.id,
       title: course.title,
       url: course.url || "",
-      image_240x135: course.image_240x135 || course.image_480x270 || course.image_125_H || ""
+      image_240x135: course.image_240x135 || course.image_480x270 || course.image_125_H || "",
+      content_info: course.content_info || course.content_info_short || undefined,
+      estimated_content_length: typeof course.estimated_content_length === "number" ? course.estimated_content_length : undefined,
+      num_published_lectures: typeof course.num_published_lectures === "number" ? course.num_published_lectures : undefined
     };
   }
   return null;
@@ -320,13 +366,15 @@ function mergeAndRenderCourses(
     .data("url", purchased.next || "");
 }
 
+const COURSE_API_FIELDS = "id,title,url,image_240x135,content_info,estimated_content_length,num_published_lectures";
+
 // Fetch both "subscribed-courses" (purchased/free) and "subscription-course-enrollments"
 // (Personal Plan) in parallel and merge them safely with deduplication.
 function loadCourses(): void {
   showSkeleton();
 
-  const purchasedUrl = `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscribed-courses?page_size=100&ordering=-last_accessed`;
-  const subscriptionUrl = `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscription-course-enrollments?page_size=100&ordering=-last_accessed`;
+  const purchasedUrl = `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscribed-courses?page_size=100&ordering=-last_accessed&fields[course]=${COURSE_API_FIELDS}`;
+  const subscriptionUrl = `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscription-course-enrollments?page_size=100&ordering=-last_accessed&fields[course]=${COURSE_API_FIELDS}`;
 
   Promise.all([
     fetchCoursesEndpoint(purchasedUrl, headers),
@@ -360,12 +408,15 @@ function showSkeleton(): void {
 
 function addCourses(results: UdemyCourseListItem[]): void {
   results.forEach((course) => {
+    const estSize = estimateCourseSize(course);
     const $row = $(
       ui.courseRow({
         id: course.id,
         url: course.url,
         title: course.title,
-        ...(course.image_240x135 !== undefined ? { image: course.image_240x135 } : {})
+        ...(course.image_240x135 !== undefined ? { image: course.image_240x135 } : {}),
+        ...(course.content_info ? { content_info: course.content_info } : {}),
+        ...(estSize ? { estimated_size: estSize } : {})
       })
     );
     // A course that is already downloading shows its live state in this list too.
@@ -421,8 +472,8 @@ function search(keyword: string, hdrs: Record<string, string>): void {
   showSkeleton();
 
   const encoded = encodeURIComponent(keyword);
-  const purchasedUrl = `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscribed-courses?page_size=100&page=1&search=${encoded}`;
-  const subscriptionUrl = `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscription-course-enrollments?page_size=100&page=1&search=${encoded}`;
+  const purchasedUrl = `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscribed-courses?page_size=100&page=1&search=${encoded}&fields[course]=${COURSE_API_FIELDS}`;
+  const subscriptionUrl = `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscription-course-enrollments?page_size=100&page=1&search=${encoded}&fields[course]=${COURSE_API_FIELDS}`;
 
   Promise.all([
     fetchCoursesEndpoint(purchasedUrl, hdrs),

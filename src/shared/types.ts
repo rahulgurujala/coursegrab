@@ -65,7 +65,9 @@ export interface CourseSummary {
   id: string | number;
   title: string;
   url: string;
-  image?: string;
+  image?: string | undefined;
+  content_info?: string | undefined;
+  estimated_size?: string | undefined;
 }
 
 // What Udemy's /subscribed-courses list/search endpoint actually returns per course: a
@@ -76,6 +78,9 @@ export interface UdemyCourseListItem {
   title: string;
   url: string;
   image_240x135?: string;
+  content_info?: string;
+  estimated_content_length?: number;
+  num_published_lectures?: number;
 }
 
 export interface UdemyCourseListResponse {
