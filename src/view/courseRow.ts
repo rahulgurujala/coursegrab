@@ -31,6 +31,10 @@ export function courseRowHtml(c: CourseSummary, state: RowState | undefined, tra
       ? `<span class="size-est">${esc(c.content_info)}</span>`
       : "";
 
+  const enrollBadge = c.is_enrolled === false
+    ? `<span class="pill badge-new" title="${esc(translate("Not yet in your enrolled library"))}">${esc(translate("Catalog"))}</span>`
+    : "";
+
   return `
 <li class="course" data-state="${state || "idle"}" course-id="${esc(c.id)}" course-url="${esc(c.url)}">
   <img class="thumb" src="${esc(c.image)}" alt="" loading="lazy">
@@ -39,6 +43,7 @@ export function courseRowHtml(c: CourseSummary, state: RowState | undefined, tra
     <p class="status-line" data-show="idle preparing downloading paused interrupted done error">
       <span class="status-text"></span>
       ${sizeBadge}
+      ${enrollBadge}
     </p>
     <div class="meter" data-show="preparing downloading paused interrupted" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="${esc(c.title)}">
       <span class="meter-track"><span class="meter-fill"></span></span><span class="meter-pct">0%</span>

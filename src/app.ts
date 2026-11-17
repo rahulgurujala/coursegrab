@@ -339,9 +339,10 @@ function fetchCoursesEndpoint(url: string, hdrs: Record<string, string>): Promis
 
 function mergeAndRenderCourses(
   purchased: FetchedCourses,
-  subscription: FetchedCourses
+  subscription: FetchedCourses,
+  catalog?: FetchedCourses
 ): void {
-  if (purchased.authError && subscription.authError) {
+  if (purchased.authError && subscription.authError && catalog?.authError) {
     settings.set("access_token", false);
     resetToLogin(translate("Your session expired. Sign in again."));
     return;
@@ -354,16 +355,29 @@ function mergeAndRenderCourses(
     const idStr = String(c.id);
     if (!seenIds.has(idStr)) {
       seenIds.add(idStr);
+      c.is_enrolled = true;
       merged.push(c);
+    }
+  }
+
+  if (catalog && Array.isArray(catalog.items)) {
+    for (const c of catalog.items) {
+      const idStr = String(c.id);
+      if (!seenIds.has(idStr)) {
+        seenIds.add(idStr);
+        c.is_enrolled = false;
+        merged.push(c);
+      }
     }
   }
 
   $("#courses-list").empty();
   addCourses(merged);
   $("#courses-empty").prop("hidden", !!merged.length);
+  const nextUrl = purchased.next || subscription.next || catalog?.next || "";
   $("#load-more")
-    .prop("hidden", !purchased.next)
-    .data("url", purchased.next || "");
+    .prop("hidden", !nextUrl)
+    .data("url", nextUrl);
 }
 
 const COURSE_API_FIELDS = "id,title,url,image_240x135,content_info,estimated_content_length,num_published_lectures";
@@ -416,7 +430,8 @@ function addCourses(results: UdemyCourseListItem[]): void {
         title: course.title,
         ...(course.image_240x135 !== undefined ? { image: course.image_240x135 } : {}),
         ...(course.content_info ? { content_info: course.content_info } : {}),
-        ...(estSize ? { estimated_size: estSize } : {})
+        ...(estSize ? { estimated_size: estSize } : {}),
+        ...(course.is_enrolled !== undefined ? { is_enrolled: course.is_enrolled } : {})
       })
     );
     // A course that is already downloading shows its live state in this list too.
@@ -444,8 +459,14 @@ $("#load-more-btn").on("click", function() {
     type: "GET",
     url,
     headers,
-    success: (response: UdemyCourseListResponse) => {
-      addCourses(response.results);
+    success: (response: any) => {
+      const rawResults = response && Array.isArray(response.results) ? response.results : [];
+      const items: UdemyCourseListItem[] = [];
+      for (const r of rawResults) {
+        const c = normalizeCourseItem(r);
+        if (c) items.push(c);
+      }
+      addCourses(items);
       $("#load-more")
         .prop("hidden", !response.next)
         .data("url", response.next || "");
@@ -461,6 +482,85 @@ function validURL(value: string): boolean {
   return new RegExp(expression).test(value);
 }
 
+function extractCourseSlug(input: string): string | null {
+  const trimmed = input.trim();
+  const match = trimmed.match(/(?:https?:\/\/[^/]+)?(?:\/)?course\/([a-zA-Z0-9_-]+)/i);
+  if (match && match[1]) {
+    return match[1];
+  }
+  return null;
+}
+
+function scrapeCourseFromHtml(html: string, slug: string, url: string): UdemyCourseListItem | null {
+  if (typeof html !== "string") return null;
+  const idMatch =
+    html.match(/data-clp-course-id="(\d+)"/) ||
+    html.match(/"course_id":\s*(\d+)/) ||
+    html.match(/courseId["']?:\s*(\d+)/) ||
+    html.match(/["']id["']:\s*(\d+)/);
+  if (!idMatch || !idMatch[1]) return null;
+  const id = parseInt(idMatch[1], 10);
+
+  const titleMatch =
+    html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i) ||
+    html.match(/<title>([^<]+)<\/title>/i);
+  const rawTitle = titleMatch && titleMatch[1] ? titleMatch[1].replace(/\s*\|\s*Udemy\s*$/i, "").trim() : slug.replace(/[-_]+/g, " ");
+
+  const imgMatch = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i);
+  const image = imgMatch && imgMatch[1] ? imgMatch[1] : "";
+
+  const durationMatch = html.match(/(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|mins?)\s*(?:total|on-demand\s*video)/i);
+  const content_info = durationMatch && durationMatch[0] ? durationMatch[0] : undefined;
+
+  return {
+    id,
+    title: rawTitle,
+    url: `/course/${slug}/`,
+    image_240x135: image,
+    ...(content_info ? { content_info } : {})
+  };
+}
+
+function fetchCourseBySlugOrUrl(slug: string, rawUrl: string, hdrs: Record<string, string>): Promise<UdemyCourseListItem[]> {
+  return new Promise((resolve) => {
+    const apiUrl = `https://${session.subDomain}.udemy.com/api-2.0/courses/${slug}/?fields[course]=${COURSE_API_FIELDS}`;
+    $.ajax({
+      type: "GET",
+      url: apiUrl,
+      headers: hdrs,
+      success: async (response: any) => {
+        const item = normalizeCourseItem(response);
+        if (item) {
+          const hasAccess = await checkCurriculumAccessible(item.id);
+          item.is_enrolled = hasAccess;
+          resolve([item]);
+        } else {
+          resolve([]);
+        }
+      },
+      error: () => {
+        const webUrl = rawUrl.startsWith("http") ? rawUrl : `https://${session.subDomain}.udemy.com/course/${slug}/`;
+        $.ajax({
+          type: "GET",
+          url: webUrl,
+          headers: hdrs,
+          success: async (html: string) => {
+            const course = scrapeCourseFromHtml(html, slug, webUrl);
+            if (course) {
+              const hasAccess = await checkCurriculumAccessible(course.id);
+              course.is_enrolled = hasAccess;
+              resolve([course]);
+            } else {
+              resolve([]);
+            }
+          },
+          error: () => resolve([])
+        });
+      }
+    });
+  });
+}
+
 function noCourses(): void {
   $("#courses-list").empty();
   $("#courses-error").prop("hidden", true);
@@ -474,12 +574,14 @@ function search(keyword: string, hdrs: Record<string, string>): void {
   const encoded = encodeURIComponent(keyword);
   const purchasedUrl = `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscribed-courses?page_size=100&page=1&search=${encoded}&fields[course]=${COURSE_API_FIELDS}`;
   const subscriptionUrl = `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscription-course-enrollments?page_size=100&page=1&search=${encoded}&fields[course]=${COURSE_API_FIELDS}`;
+  const catalogUrl = `https://${session.subDomain}.udemy.com/api-2.0/courses/?page_size=40&page=1&search=${encoded}&fields[course]=${COURSE_API_FIELDS}`;
 
   Promise.all([
     fetchCoursesEndpoint(purchasedUrl, hdrs),
-    fetchCoursesEndpoint(subscriptionUrl, hdrs)
-  ]).then(([purchased, subscription]) => {
-    mergeAndRenderCourses(purchased, subscription);
+    fetchCoursesEndpoint(subscriptionUrl, hdrs),
+    fetchCoursesEndpoint(catalogUrl, hdrs)
+  ]).then(([purchased, subscription, catalog]) => {
+    mergeAndRenderCourses(purchased, subscription, catalog);
   });
 }
 
@@ -493,52 +595,47 @@ $("#search-clear").on("click", () => {
   loadCourses();
 });
 
-$("#search-form").on("submit", (e) => {
+$("#search-form").on("submit", async (e) => {
   e.preventDefault();
   let keyword = String($("#search-input").val() || "").trim();
   if (!keyword) {
     loadCourses();
     return;
   }
-  if (validURL(keyword)) {
-    if (!/^https?:\/\//i.test(keyword)) {
-      keyword = "https://" + keyword;
+
+  // 1. Check if user pasted a course URL or path (/course/<slug>/)
+  const slug = extractCourseSlug(keyword);
+  if (slug) {
+    showSkeleton();
+    const items = await fetchCourseBySlugOrUrl(slug, keyword, headers);
+    if (items.length) {
+      $("#courses-list").empty();
+      addCourses(items);
+      $("#courses-empty").prop("hidden", true);
+      $("#load-more").prop("hidden", true);
+      return;
     }
-    $.ajax({
-      type: "GET",
-      url: keyword,
-      beforeSend: showSkeleton,
-      headers,
-      success: (response: string) => {
-        const titleMatch = typeof response === "string" ? response.match(/<title>([^<]+)<\/title>/i) : null;
-        let title = (titleMatch && titleMatch[1]) ? titleMatch[1].replace(/\s*\|\s*Udemy\s*$/i, "").trim() : "";
-        if (!title) {
-          const slugMatch = keyword.match(/\/course\/([^/?#]+)/i);
-          if (slugMatch && slugMatch[1]) {
-            title = decodeURIComponent(slugMatch[1]).replace(/[-_]+/g, " ");
-          }
-        }
-        if (title) {
-          $("#search-input").val(title);
-          search(title, headers);
-        } else {
-          noCourses();
-        }
-      },
-      error: () => {
-        const slugMatch = keyword.match(/\/course\/([^/?#]+)/i);
-        if (slugMatch && slugMatch[1]) {
-          const title = decodeURIComponent(slugMatch[1]).replace(/[-_]+/g, " ");
-          $("#search-input").val(title);
-          search(title, headers);
-        } else {
-          noCourses();
-        }
-      }
-    });
-  } else {
-    search(keyword, headers);
+    // Fallback: search catalog & enrolled by slug title
+    const slugQuery = slug.replace(/[-_]+/g, " ");
+    search(slugQuery, headers);
+    return;
   }
+
+  // 2. Check if user pasted a search URL (e.g. udemy.com/courses/search/?q=...)
+  if (validURL(keyword)) {
+    try {
+      const parsed = new URL(keyword.startsWith("http") ? keyword : "https://" + keyword);
+      const q = parsed.searchParams.get("q") || parsed.searchParams.get("search");
+      if (q) {
+        $("#search-input").val(q);
+        search(q, headers);
+        return;
+      }
+    } catch (_) {}
+  }
+
+  // 3. Regular name search across enrolled + entire Udemy catalog
+  search(keyword, headers);
 });
 
 $("#courses-list, #downloads-list").on("click", ".open-in-browser", function() {
@@ -644,6 +741,238 @@ function prepError(status: unknown): string {
   return translate("Could not load this course. Check your connection and retry.");
 }
 
+// Check whether the user currently has access to the course curriculum
+function checkCurriculumAccessible(courseId: string | number): Promise<boolean> {
+  return new Promise((resolve) => {
+    $.ajax({
+      type: "GET",
+      url: `https://${session.subDomain}.udemy.com/api-2.0/courses/${courseId}/cached-subscriber-curriculum-items?page_size=1`,
+      headers,
+      success: () => resolve(true),
+      error: () => resolve(false)
+    });
+  });
+}
+
+// Attempt automated API enrollment (Udemy Personal Plan / Subscription endpoint)
+async function tryApiEnroll(courseId: string | number): Promise<boolean> {
+  const token = settings.get("access_token") as string;
+  const hdrs = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json"
+  };
+
+  const ok1 = await new Promise<boolean>((resolve) => {
+    $.ajax({
+      type: "POST",
+      url: `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscription-course-enrollments/`,
+      headers: hdrs,
+      data: JSON.stringify({ course_id: Number(courseId) }),
+      success: () => resolve(true),
+      error: () => resolve(false)
+    });
+  });
+  if (ok1) return true;
+
+  const ok2 = await new Promise<boolean>((resolve) => {
+    $.ajax({
+      type: "POST",
+      url: `https://${session.subDomain}.udemy.com/api-2.0/users/me/subscribed-courses/`,
+      headers: hdrs,
+      data: JSON.stringify({ course_id: Number(courseId) }),
+      success: () => resolve(true),
+      error: () => resolve(false)
+    });
+  });
+  return ok2;
+}
+
+// Automated in-app helper window for Personal Plan 1-click enrollment if direct API needs web session/CSRF
+function autoEnrollViaWindow(
+  courseId: string | number,
+  courseUrl: string,
+  courseTitle: string,
+  $all: JQuery,
+  prep: { cancelled: boolean }
+): Promise<boolean> {
+  return new Promise(async (resolve) => {
+    if (prep.cancelled) return resolve(false);
+
+    const token = settings.get("access_token") as string;
+    const sub = session.subDomain || "www";
+    const ses = remote.session.defaultSession;
+
+    if (token) {
+      try {
+        await ses.cookies.set({
+          url: `https://${sub}.udemy.com`,
+          name: "access_token",
+          value: token,
+          domain: ".udemy.com",
+          path: "/",
+          secure: true,
+          httpOnly: true
+        });
+      } catch (_) {}
+    }
+
+    let targetUrl = courseUrl;
+    if (!targetUrl) {
+      try {
+        const res = await new Promise<any>((r) => {
+          $.ajax({
+            type: "GET",
+            url: `https://${sub}.udemy.com/api-2.0/courses/${courseId}/?fields[course]=url`,
+            headers,
+            success: r,
+            error: () => r(null)
+          });
+        });
+        if (res && res.url) targetUrl = res.url;
+      } catch (_) {}
+    }
+
+    const fullUrl = targetUrl.startsWith("http")
+      ? targetUrl
+      : `https://${sub}.udemy.com${targetUrl.startsWith("/") ? "" : "/"}${targetUrl}`;
+
+    ui.Row.text($all, translate("Activating course access…"));
+
+    const parent = remote.getCurrentWindow();
+    const win = new BrowserWindow({
+      width: 900,
+      height: 700,
+      show: false,
+      title: `CourseGrab - ${courseTitle}`,
+      parent,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+
+    let resolved = false;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+    const cleanup = () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+      if (!win.isDestroyed()) {
+        win.destroy();
+      }
+    };
+
+    win.on("closed", () => {
+      if (!resolved) {
+        resolved = true;
+        cleanup();
+        checkCurriculumAccessible(courseId).then(resolve);
+      }
+    });
+
+    win.webContents.on("did-finish-load", async () => {
+      try {
+        await win.webContents.executeJavaScript(`
+          (function() {
+            function clickEnroll() {
+              const selectors = [
+                '[data-purpose*="enroll"]',
+                '[data-purpose*="start-course"]',
+                '[data-purpose*="start-learning"]',
+                '[data-purpose*="subscription"]',
+                'button[data-purpose*="buy-this-course-button"]'
+              ];
+              for (const sel of selectors) {
+                const el = document.querySelector(sel);
+                if (el) {
+                  el.click();
+                  return true;
+                }
+              }
+              const candidates = Array.from(document.querySelectorAll('button, a'));
+              for (const el of candidates) {
+                const t = (el.innerText || el.textContent || '').trim().toLowerCase();
+                if (
+                  t === 'enroll now' ||
+                  t === 'start course' ||
+                  t === 'start learning' ||
+                  t === 'go to course' ||
+                  t.includes('start course') ||
+                  t.includes('enroll now')
+                ) {
+                  el.click();
+                  return true;
+                }
+              }
+              return false;
+            }
+            clickEnroll();
+            setTimeout(clickEnroll, 1200);
+            setTimeout(clickEnroll, 2500);
+          })()
+        `);
+      } catch (_) {}
+    });
+
+    let attempts = 0;
+    pollInterval = setInterval(async () => {
+      if (prep.cancelled) {
+        resolved = true;
+        cleanup();
+        resolve(false);
+        return;
+      }
+
+      attempts++;
+      const ok = await checkCurriculumAccessible(courseId);
+      if (ok) {
+        resolved = true;
+        cleanup();
+        resolve(true);
+        return;
+      }
+
+      if (attempts === 5 && !win.isDestroyed()) {
+        win.show();
+        win.focus();
+        ui.Row.text($all, translate("Confirm enrollment in the opened window…"));
+      }
+
+      if (attempts >= 45) {
+        resolved = true;
+        cleanup();
+        resolve(false);
+      }
+    }, 1000);
+
+    win.loadURL(fullUrl).catch(() => {});
+  });
+}
+
+async function ensureCourseEnrolled(
+  courseId: string | number,
+  courseUrl: string,
+  courseTitle: string,
+  $all: JQuery,
+  prep: { cancelled: boolean }
+): Promise<boolean> {
+  const hasAccess = await checkCurriculumAccessible(courseId);
+  if (hasAccess || prep.cancelled) return hasAccess;
+
+  ui.Row.text($all, translate("Enrolling course…"));
+  const apiOk = await tryApiEnroll(courseId);
+  if (apiOk) {
+    await new Promise((r) => setTimeout(r, 1200));
+    if (await checkCurriculumAccessible(courseId)) {
+      return true;
+    }
+  }
+
+  return await autoEnrollViaWindow(courseId, courseUrl, courseTitle, $all, prep);
+}
+
 // Download, Resume, Retry and Check for updates all start the same flow. The engine works out
 // what is new or changed by comparing the course with what an earlier download saved.
 $("#app").on("click", ".download-btn, .retry-btn, .update-btn", async function(e) {
@@ -670,9 +999,23 @@ $("#app").on("click", ".download-btn, .retry-btn, .update-btn", async function(e
   ui.Row.state($all, "preparing");
   ui.Row.text($all, translate("Preparing course") + "…");
   ui.Row.progress($all, 0, 0);
+
+  const courseUrl = $course.attr("course-url") || "";
+  const courseTitle = $course.find(".coursename").text();
+
+  const enrolled = await ensureCourseEnrolled(courseid, courseUrl, courseTitle, $all, prep);
+  if (prep.cancelled) return;
+  if (!enrolled) {
+    delete downloadControls[courseid];
+    ui.Row.state($all, "error");
+    ui.Row.text($all, translate("Could not enroll in course. Make sure it is included in your plan."));
+    return;
+  }
+  $all.find(".badge-new").remove();
+
   try {
     const data = await prepareCourse(
-      { id: courseid, title: $course.find(".coursename").text(), url: $course.attr("course-url") || "" },
+      { id: courseid, title: courseTitle, url: courseUrl },
       prep,
       (done, total) => {
         const text = translate("Preparing course") + "… " + done + "/" + total;
