@@ -65,7 +65,10 @@ export interface CourseSummary {
   id: string | number;
   title: string;
   url: string;
-  image?: string;
+  image?: string | undefined;
+  content_info?: string | undefined;
+  estimated_size?: string | undefined;
+  is_enrolled?: boolean | undefined;
 }
 
 // What Udemy's /subscribed-courses list/search endpoint actually returns per course: a
@@ -76,12 +79,28 @@ export interface UdemyCourseListItem {
   title: string;
   url: string;
   image_240x135?: string;
+  content_info?: string;
+  estimated_content_length?: number;
+  num_published_lectures?: number;
+  is_enrolled?: boolean;
 }
 
 export interface UdemyCourseListResponse {
   count: number;
   next: string | null;
   results: UdemyCourseListItem[];
+}
+
+// What Udemy's /subscription-course-enrollments endpoint returns: each item wraps the
+// course inside a `course` property (unlike /subscribed-courses which is flat).
+export interface UdemySubscriptionEnrollmentItem {
+  course: UdemyCourseListItem;
+}
+
+export interface UdemySubscriptionEnrollmentResponse {
+  count: number;
+  next: string | null;
+  results: UdemySubscriptionEnrollmentItem[];
 }
 
 // ---------- curriculum / lectures ----------

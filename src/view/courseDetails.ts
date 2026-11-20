@@ -214,6 +214,30 @@ export function createCourseDetail(deps: CourseDetailDeps): CourseDetail {
     const c = counts();
     const parts: string[] = [];
     if (c.all) parts.push(c.all + " " + translate("lectures"));
+
+    let knownBytes = 0;
+    let knownCount = 0;
+    let unmeasuredCount = 0;
+    entries().forEach((e) => {
+      if (e.size != null && e.size > 0) {
+        knownBytes += e.size;
+        knownCount++;
+      } else if (e.state !== "skipped" && e.state !== "outside") {
+        unmeasuredCount++;
+      }
+    });
+
+    if (c.all > 0) {
+      const avgLectureBytes = knownCount > 0 ? (knownBytes / knownCount) : (50 * 1024 * 1024);
+      const totalEstBytes = knownBytes + (unmeasuredCount * avgLectureBytes);
+      if (totalEstBytes > 0) {
+        const estText = (knownCount > 0 && unmeasuredCount === 0)
+          ? formatSize(knownBytes)
+          : "~" + formatSize(totalEstBytes);
+        parts.push(translate("Est. disk space") + ": " + estText);
+      }
+    }
+
     if (c.done) parts.push(c.done + " " + translate("saved"));
     if (c.active) parts.push(c.active + " " + translate("waiting"));
     if (c.unchanged) parts.push(c.unchanged + " " + translate("unchanged"));
